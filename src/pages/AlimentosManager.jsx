@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PlusCircle, Edit, Trash2, X, Save } from "lucide-react";
 
 const CAMPOS = [
@@ -52,7 +52,7 @@ export default function AlimentosManager() {
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [filtro, setFiltro] = useState("");
-  
+
   // --- Abrir modal para crear o editar ---
   const openModal = (alimento = null) => {
     if (alimento) {

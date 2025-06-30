@@ -4,6 +4,7 @@ import MenuPlanner from "../components/MenuPlanner";
 import RecipeManager from "../components/RecipeManager";
 import AlimentosManager from "../pages/AlimentosManager";
 import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
+import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
@@ -72,6 +73,15 @@ export default function Home() {
           >
             <Sparkles size={20} /> Nutrientes
           </button>
+          <button
+            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
+              ${activeTab === "nutrientes2"
+                ? "bg-cyan-600 text-white shadow-lg"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+            onClick={() => setActiveTab("nutrientes2")}
+          >
+            <Sparkles size={20} /> Nutrientes2
+          </button>
         </div>
         {/* Content */}
         <div className="w-full p-4 md:p-8">
@@ -79,6 +89,7 @@ export default function Home() {
           {activeTab === "recipes" && <RecipeManager />}
           {activeTab === "alimentos" && <AlimentosManager />}
           {activeTab === "nutrientes" && <MenuNutritionalDetail />}
+          {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
         </div>
       </div>
     </div>
