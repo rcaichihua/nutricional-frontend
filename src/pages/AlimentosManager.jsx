@@ -25,10 +25,6 @@ export default function AlimentosManager() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [alimentoAEliminar, setAlimentoAEliminar] = useState(null);
 
-  useEffect(() => {
-    console.log("Recibiendo alimentos", alimentos);
-  }, [alimentos]);
-
   // --- Guardar alimento (crear o editar) ---
   const handleSave = async (alimento) => {
     setErrorApi(null);

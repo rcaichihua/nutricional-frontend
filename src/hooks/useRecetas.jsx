@@ -18,5 +18,8 @@ export function useRecetas() {
     fetchRecetas();
   }, [fetchRecetas]);
 
-  return { recetas, loading, error, refetch: fetchRecetas };
+  // Devuelve las recetas con ingredientes (aquí se asume que cada receta ya tiene un campo 'ingredientes')
+  const recetasConIngredientes = recetas.filter(r => r.ingredientes && r.ingredientes.length > 0);
+
+  return { recetas, loading, error, refetch: fetchRecetas, recetasConIngredientes };
 }
