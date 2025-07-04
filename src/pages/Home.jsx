@@ -2,7 +2,7 @@ import { useState } from "react";
 import { BookHeart, Calendar, Apple, Sparkles } from "lucide-react";
 import MenuPlanner from "../components/MenuPlanner";
 import RecipeManager from "./RecipeManager";
-import AlimentosManager from "../pages/AlimentosManager";
+import InsumosManager from "../pages/InsumosManager";
 import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
 import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";
 
@@ -87,7 +87,7 @@ export default function Home() {
         <div className="w-full p-4 md:p-8">
           {activeTab === "planner" && <MenuPlanner />}
           {activeTab === "recipes" && <RecipeManager />}
-          {activeTab === "alimentos" && <AlimentosManager />}
+          {activeTab === "alimentos" && <InsumosManager />}
           {activeTab === "nutrientes" && <MenuNutritionalDetail />}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
         </div>

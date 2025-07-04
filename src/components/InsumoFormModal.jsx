@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Save, X } from "lucide-react";
 
-export default function AlimentoFormModal({ alimento, onSave, onClose }) {
-  const [form, setForm] = useState(alimento || { estado: "ACTIVO" });
+export default function InsumoFormModal({ insumo, onSave, onClose }) {
+  const [form, setForm] = useState(insumo || { estado: "ACTIVO" });
 
   useEffect(() => {
-    setForm(alimento || { estado: "ACTIVO" });
-  }, [alimento]);
+    setForm(insumo || { estado: "ACTIVO" });
+  }, [insumo]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
@@ -31,7 +31,7 @@ export default function AlimentoFormModal({ alimento, onSave, onClose }) {
           <X size={28} />
         </button>
         <h3 className="text-2xl font-bold text-gray-800 mb-6">
-          {alimento ? "Editar alimento" : "Nuevo alimento"}
+          {insumo ? "Editar insumo" : "Nuevo insumo"}
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
@@ -58,13 +58,13 @@ export default function AlimentoFormModal({ alimento, onSave, onClose }) {
                 onChange={handleChange}
               />
             </div>
-            {/* Campo: Nombre del alimento */}
+            {/* Campo: Nombre del insumo */}
             <div className="flex flex-col gap-1">
               <label className="font-semibold text-gray-600">Nombre</label>
               <input
                 type="text"
-                name="nombreAlimento"
-                value={form.nombreAlimento ?? ""}
+                name="nombre"
+                value={form.nombre ?? ""}
                 required
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
@@ -375,7 +375,7 @@ export default function AlimentoFormModal({ alimento, onSave, onClose }) {
               className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg flex items-center shadow-md"
             >
               <Save size={18} className="mr-2" />
-              Guardar alimento
+              Guardar insumo
             </button>
           </div>
         </form>

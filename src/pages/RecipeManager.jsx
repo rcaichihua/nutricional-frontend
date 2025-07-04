@@ -16,16 +16,16 @@ const RECETAS_DEMO = [
     id: 1,
     nombre: "Lentejas con arroz",
     ingredientes: [
-      { alimento: { id: 2, nombre: "Lentejas" }, cantidad: 100, unidad: "gr" },
-      { alimento: { id: 4, nombre: "Arroz" }, cantidad: 80, unidad: "gr" },
+      { insumo: { id: 2, nombre: "Lentejas" }, cantidad: 100, unidad: "gr" },
+      { insumo: { id: 4, nombre: "Arroz" }, cantidad: 80, unidad: "gr" },
     ],
   },
   {
     id: 2,
     nombre: "Pollo al horno",
     ingredientes: [
-      { alimento: { id: 3, nombre: "Pollo" }, cantidad: 200, unidad: "gr" },
-      { alimento: { id: 1, nombre: "Papa" }, cantidad: 120, unidad: "gr" },
+      { insumo: { id: 3, nombre: "Pollo" }, cantidad: 200, unidad: "gr" },
+      { insumo: { id: 1, nombre: "Papa" }, cantidad: 120, unidad: "gr" },
     ],
   },
 ];
@@ -128,7 +128,7 @@ export default function RecipeManager() {
   // Form fields
   const [nombre, setNombre] = useState("");
   const [ingredientes, setIngredientes] = useState([
-    { alimento: null, cantidad: "", unidad: "gr" },
+    { insumo: null, cantidad: "", unidad: "gr" },
   ]);
 
   // Modal para crear/editar receta
@@ -138,7 +138,7 @@ export default function RecipeManager() {
       setNombre(receta.nombre);
       setIngredientes(
         receta.ingredientes.map((i) => ({
-          alimento: i.alimento,
+          insumo: i.insumo,
           cantidad: i.cantidad,
           unidad: i.unidad,
         }))
@@ -146,7 +146,7 @@ export default function RecipeManager() {
     } else {
       setEditing(null);
       setNombre("");
-      setIngredientes([{ alimento: null, cantidad: "", unidad: "gr" }]);
+      setIngredientes([{ insumo: null, cantidad: "", unidad: "gr" }]);
     }
     setModalOpen(true);
   };
@@ -154,14 +154,14 @@ export default function RecipeManager() {
   const closeModal = () => {
     setModalOpen(false);
     setNombre("");
-    setIngredientes([{ alimento: null, cantidad: "", unidad: "gr" }]);
+    setIngredientes([{ insumo: null, cantidad: "", unidad: "gr" }]);
     setEditing(null);
   };
 
   // Guardar receta (nuevo o editar)
   const handleSave = () => {
     if (!nombre.trim()) return alert("Ponle nombre a la receta");
-    if (!ingredientes.every((i) => i.alimento && i.cantidad > 0)) {
+    if (!ingredientes.every((i) => i.insumo && i.cantidad > 0)) {
       return alert("Completa todos los ingredientes");
     }
     if (editing) {
@@ -193,7 +193,7 @@ export default function RecipeManager() {
   const handleAddIng = () =>
     setIngredientes((ings) => [
       ...ings,
-      { alimento: null, cantidad: "", unidad: "gr" },
+      { insumo: null, cantidad: "", unidad: "gr" },
     ]);
   const handleRemoveIng = (idx) =>
     setIngredientes((ings) => ings.filter((_, i) => i !== idx));
@@ -290,19 +290,19 @@ export default function RecipeManager() {
                     key={idx}
                     className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg"
                   >
-                    {/* Select alimento */}
+                    {/* Select insumo */}
                     <select
                       className="border rounded-lg px-2 py-2 flex-1"
-                      value={ing.alimento?.id || ""}
+                      value={ing.insumo?.id || ""}
                       onChange={(e) =>
                         handleIngChange(
                           idx,
-                          "alimento",
+                          "insumo",
                           ALIMENTOS.find((a) => a.id === Number(e.target.value))
                         )
                       }
                     >
-                      <option value="">Selecciona alimento</option>
+                      <option value="">Selecciona insumo</option>
                       {ALIMENTOS.map((a) => (
                         <option value={a.id} key={a.id}>
                           {a.nombre}

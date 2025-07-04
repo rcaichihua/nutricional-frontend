@@ -20,7 +20,7 @@ export async function crearReceta(receta: Receta): Promise<Receta> {
   });
 }
 
-export async function editarAlimento(receta: Receta): Promise<Receta> {
+export async function editarReceta(receta: Receta): Promise<Receta> {
   const res = await fetch(`${API_URL}/${receta.id}`, {
     method: "PUT",
     headers: {

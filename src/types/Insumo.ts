@@ -1,5 +1,5 @@
-export interface AlimentoNutricional {
-    id: number;
+export interface Insumo {
+    insumoId: number;
     grupo: string;
     subgrupo: string;
     nombre: string;

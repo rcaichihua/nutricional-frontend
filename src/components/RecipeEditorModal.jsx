@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { X, PlusCircle, Trash2 } from "lucide-react";
 
-export default function RecipeEditorModal({ open, onClose, receta, alimentos, onGuardar }) {
+export default function RecipeEditorModal({ open, onClose, receta, insumos, onGuardar }) {
   const [nombre, setNombre] = useState("");
   const [ingredientes, setIngredientes] = useState([]);
 
@@ -21,22 +21,22 @@ export default function RecipeEditorModal({ open, onClose, receta, alimentos, on
   const handleAddIngrediente = () => {
     setIngredientes((prev) => [
       ...prev,
-      { alimento_id: "", nombre: "", cantidad: "", unidad: "gr" },
+      { insumoId: "", nombre: "", cantidad: "", unidad: "gr" },
     ]);
   };
 
-  // Modifica un ingrediente (por índice)
+  // Modifica un insumo (por índice)
   const handleIngredienteChange = (idx, campo, valor) => {
     setIngredientes((prev) =>
       prev.map((ing, i) =>
         i === idx
-          ? campo === "alimento_id"
+          ? campo === "insumoId"
             ? {
                 ...ing,
-                alimento_id: valor,
+                insumoId: valor,
                 nombre:
-                  alimentos.find((a) => a.id === Number(valor))
-                    ?.nombre_alimento || "",
+                  insumos.find((a) => a.id === Number(valor))
+                    ?.nombre || "",
               }
             : { ...ing, [campo]: valor }
           : ing
@@ -44,7 +44,7 @@ export default function RecipeEditorModal({ open, onClose, receta, alimentos, on
     );
   };
 
-  // Eliminar ingrediente
+  // Eliminar insumo
   const handleRemoveIngrediente = (idx) => {
     setIngredientes((prev) => prev.filter((_, i) => i !== idx));
   };
@@ -93,16 +93,16 @@ export default function RecipeEditorModal({ open, onClose, receta, alimentos, on
             <div key={idx} className="flex gap-2 mb-2">
               <select
                 className="flex-1 border rounded-xl px-2 py-1 bg-gray-50"
-                value={ing.alimento_id}
+                value={ing.insumoId}
                 onChange={(e) =>
-                  handleIngredienteChange(idx, "alimento_id", e.target.value)
+                  handleIngredienteChange(idx, "insumoId", e.target.value)
                 }
                 required
               >
-                <option value="">Elige alimento...</option>
-                {alimentos.map((a) => (
+                <option value="">Elige insumo...</option>
+                {insumos.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.nombre_alimento}
+                    {a.nombre}
                   </option>
                 ))}
               </select>

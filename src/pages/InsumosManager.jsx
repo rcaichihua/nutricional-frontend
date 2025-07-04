@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { PlusCircle, Edit, Trash2, X, Save } from "lucide-react";
-import { useAlimentos } from "../hooks/useAlimentos";
-import AlimentoFormModal from "../components/AlimentoFormModal";
-import { crearAlimento, editarAlimento, eliminarAlimento } from "../api/alimentos";
+import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { useInsumos } from "../hooks/useInsumos";
+import InsumoFormModal from "../components/InsumoFormModal";
+import { crearInsumo, editarInsumo, eliminarInsumo } from "../api/insumos";
 import ConfirmModal from "../components/ConfirmModal";
 
 const ESTADOS = ["ACTIVO", "INACTIVO", "ELIMINADO", "OBSERVADO"];
@@ -14,68 +14,68 @@ function normalizar(str) {
     .toLowerCase();
 }
 
-export default function AlimentosManager() {
+export default function InsumoManager() {
 
-  const { alimentos, loading, error, refetch } = useAlimentos();
-  const [alimentoEditando, setAlimentoEditando] = useState(null);
+  const { insumos, loading, error, refetch } = useInsumos();
+  const [insumoEditando, setInsumoEditando] = useState(null);
   const [filtro, setFiltro] = useState("");
   const [pagina, setPagina] = useState(1);
   const registrosPorPagina = 10;
   const [errorApi, setErrorApi] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [alimentoAEliminar, setAlimentoAEliminar] = useState(null);
+  const [insumoAEliminar, setAlimentoAEliminar] = useState(null);
 
-  // --- Guardar alimento (crear o editar) ---
-  const handleSave = async (alimento) => {
+  // --- Guardar insumo (crear o editar) ---
+  const handleSave = async (insumo) => {
     setErrorApi(null);
     try {
-      if (!alimento.nombreAlimento?.trim()) {
-        alert("Debes poner el nombre del alimento");
+      if (!insumo.nombre?.trim()) {
+        alert("Debes poner el nombre del insumo");
         return;
       }
-      if (!alimento.grupo?.trim()) {
+      if (!insumo.grupo?.trim()) {
         alert("Selecciona el grupo");
         return;
       }
 
-      if (!alimento.id) {
-        // Nuevo alimento: llamar a la API
+      if (!insumo.insumoId) {
+        // Nuevo insumo: llamar a la API
         try {
-          await crearAlimento(alimento);
+          await crearInsumo(insumo);
           refetch(); // Recargar la lista desde la API
         } catch (e) {
-          alert("Error al crear el alimento");
+          alert("Error al crear el insumo");
         }
       } else {
-        // Editar alimento existente
+        // Editar insumo existente
         try {
-          await editarAlimento(alimento);
+          await editarInsumo(insumo);
           refetch();
         } catch (e) {
-          alert("Error al editar el alimento");
+          alert("Error al editar el insumo");
         }
       }
-      setAlimentoEditando(null);
+      setInsumoEditando(null);
     } catch (e) {
       setErrorApi(e.message || "Error inesperado");
     }
   };
 
-  // --- Eliminar alimento ---
-  const handleDelete = async (alimento) => {
-    if (window.confirm("¿Eliminar alimento?")) {
+  // --- Eliminar insumo ---
+  const handleDelete = async (insumo) => {
+    if (window.confirm("¿Eliminar insumo?")) {
       try {
-        await eliminarAlimento(alimento);
+        await eliminarInsumo(insumo);
         refetch();
       } catch (e) {
-        alert("Error al eliminar el alimento");
+        alert("Error al eliminar el insumo");
       }
     }
   };
 
   // --- Buscador por nombre, grupo o subgrupo ---
   const filtroNormalizado = normalizar(filtro);
-  const alimentosFiltrados = alimentos.filter(a => {
+  const insumosFiltrados = insumos.filter(a => {
     const nombre = normalizar(a.nombre);
     const grupo = normalizar(a.grupo);
     const subgrupo = normalizar(a.subgrupo);
@@ -87,8 +87,8 @@ export default function AlimentosManager() {
   });
 
   // --- Paginación ---
-  const totalPaginas = Math.ceil(alimentosFiltrados.length / registrosPorPagina);
-  const alimentosPagina = alimentosFiltrados.slice(
+  const totalPaginas = Math.ceil(insumosFiltrados.length / registrosPorPagina);
+  const insumosPagina = insumosFiltrados.slice(
     (pagina - 1) * registrosPorPagina,
     pagina * registrosPorPagina
   );
@@ -97,12 +97,12 @@ export default function AlimentosManager() {
   useEffect(() => { setPagina(1); }, [filtro]);
 
   const handleConfirmDelete = async () => {
-    if (alimentoAEliminar) {
+    if (insumoAEliminar) {
       try {
-        await eliminarAlimento(alimentoAEliminar);
+        await eliminarInsumo(insumoAEliminar);
         refetch();
       } catch (e) {
-        alert("Error al eliminar el alimento");
+        alert("Error al eliminar el insumo");
       }
       setAlimentoAEliminar(null);
       setConfirmOpen(false);
@@ -117,7 +117,7 @@ export default function AlimentosManager() {
         </h2>
         <button
           className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all"
-          onClick={() => setAlimentoEditando({ estado: "ACTIVO" })}
+          onClick={() => setInsumoEditando({ estado: "ACTIVO" })}
         >
           <PlusCircle size={18} className="mr-2" /> Nuevo alimento
         </button>
@@ -130,7 +130,7 @@ export default function AlimentosManager() {
         onChange={e => setFiltro(e.target.value)}
       />
 
-      {/* Tabla alimentos */}
+      {/* Tabla insumos */}
       <div className="overflow-x-auto bg-white rounded-2xl shadow-md border border-gray-200">
         <table className="min-w-full text-xs md:text-sm text-left border-separate border-spacing-y-1">
           <thead className="bg-gray-100">
@@ -145,15 +145,15 @@ export default function AlimentosManager() {
             </tr>
           </thead>
           <tbody>
-            {alimentosPagina.length === 0 ? (
+            {insumosPagina.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-8 text-gray-400">
-                  No hay alimentos registrados.
+                  No hay insumos registrados.
                 </td>
               </tr>
             ) : (
-              alimentosPagina.map(a => (
-                <tr key={a.id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:bg-green-50 transition-all">
+              insumosPagina.map(a => (
+                <tr key={a.insumoId} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:bg-green-50 transition-all">
                   <td className="p-3 font-bold text-gray-800 align-middle rounded-l-xl">{a.nombre}</td>
                   <td className="p-3 text-gray-700 align-middle">{a.grupo}</td>
                   <td className="p-3 text-gray-700 align-middle">{a.subgrupo || "-"}</td>
@@ -163,7 +163,7 @@ export default function AlimentosManager() {
                   <td className="p-3 flex gap-2 align-middle rounded-r-xl">
                     <button
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
-                      onClick={() => setAlimentoEditando(a)}
+                      onClick={() => setInsumoEditando(a)}
                       title="Editar"
                     >
                       <Edit size={18} />
@@ -200,17 +200,17 @@ export default function AlimentosManager() {
         >Siguiente</button>
       </div>
       {/* Modal */}
-      {alimentoEditando && (
-        <AlimentoFormModal
-          alimento={alimentoEditando}
+      {insumoEditando && (
+        <InsumoFormModal
+          insumo={insumoEditando}
           onSave={handleSave}
-          onClose={() => setAlimentoEditando(null)}
+          onClose={() => setInsumoEditando(null)}
         />
       )}
       <ConfirmModal
         open={confirmOpen}
-        title="¿Eliminar alimento?"
-        message="Esta acción marcará el alimento como eliminado. ¿Deseas continuar?"
+        title="¿Eliminar insumo?"
+        message="Esta acción marcará el insumo como eliminado. ¿Deseas continuar?"
         onConfirm={handleConfirmDelete}
         onCancel={() => { setConfirmOpen(false); setAlimentoAEliminar(null); }}
       />
