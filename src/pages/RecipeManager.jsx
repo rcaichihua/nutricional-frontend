@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { PlusCircle, Edit, Trash2, Save, X } from "lucide-react";
+import { useRecetaIngredientes } from "../hooks/useRecetaIngredientes";
+
 
 // Dummy alimentos para el demo (luego traes del backend)
 const ALIMENTOS = [
@@ -32,6 +34,12 @@ const RECETAS_DEMO = [
 ];
 
 export default function RecipeManager() {
+
+  const { recetaIngredientes, loading, error, refetch } = useRecetaIngredientes();
+
+  console.log("recetaIngredientes", recetaIngredientes);
+
+
   const [recetas, setRecetas] = useState(RECETAS_DEMO);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -137,7 +145,14 @@ export default function RecipeManager() {
       </div>
       {/* Lista de recetas */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {recetas.map(receta => (
+        {recetaIngredientes.map(recetaIngrediente => (
+          <div key={`${recetaIngrediente.id}`} className="border border-gray-200 rounded-xl p-4 bg-white shadow flex flex-col justify-between">
+            <div>
+              <h3 className="font-bold text-lg text-gray-800">{recetaIngrediente.nombre}</h3>
+            </div>
+          </div>
+        ))}
+        {/* {recetas.map(receta => (
           <div key={receta.id} className="border border-gray-200 rounded-xl p-4 bg-white shadow flex flex-col justify-between">
             <div>
               <h3 className="font-bold text-lg text-gray-800">{receta.nombre}</h3>
@@ -164,7 +179,7 @@ export default function RecipeManager() {
               </button>
             </div>
           </div>
-        ))}
+        ))} */}
       </div>
       {/* MODAL */}
       {modalOpen && (

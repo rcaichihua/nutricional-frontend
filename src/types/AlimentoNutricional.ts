@@ -2,7 +2,7 @@ export interface AlimentoNutricional {
     id: number;
     grupo: string;
     subgrupo: string;
-    nombreAlimento: string;
+    nombre: string;
     pesoNeto: number | null;
     energiaKcal: number | null;
     aguaG: number | null;

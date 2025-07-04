@@ -1,7 +1,7 @@
 import { AlimentoNutricional } from "../types/AlimentoNutricional";
 import { fetchJson } from "./fetchUtils";
 
-const API_URL = "http://localhost:8080/api/alimentos";
+const API_URL = "http://localhost:8080/api/insumos  ";
 
 export async function getAlimentos(): Promise<AlimentoNutricional[]> {
   return fetchJson(API_URL);

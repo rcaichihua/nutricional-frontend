@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { BookHeart, Calendar, Apple, Sparkles } from "lucide-react";
 import MenuPlanner from "../components/MenuPlanner";
-import RecipeManager from "../components/RecipeManager";
+import RecipeManager from "./RecipeManager";
 import AlimentosManager from "../pages/AlimentosManager";
 import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
 import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";

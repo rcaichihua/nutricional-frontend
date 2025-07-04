@@ -80,7 +80,7 @@ export default function AlimentosManager() {
   // --- Buscador por nombre, grupo o subgrupo ---
   const filtroNormalizado = normalizar(filtro);
   const alimentosFiltrados = alimentos.filter(a => {
-    const nombre = normalizar(a.nombreAlimento);
+    const nombre = normalizar(a.nombre);
     const grupo = normalizar(a.grupo);
     const subgrupo = normalizar(a.subgrupo);
     return (
@@ -158,7 +158,7 @@ export default function AlimentosManager() {
             ) : (
               alimentosPagina.map(a => (
                 <tr key={a.id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:bg-green-50 transition-all">
-                  <td className="p-3 font-bold text-gray-800 align-middle rounded-l-xl">{a.nombreAlimento}</td>
+                  <td className="p-3 font-bold text-gray-800 align-middle rounded-l-xl">{a.nombre}</td>
                   <td className="p-3 text-gray-700 align-middle">{a.grupo}</td>
                   <td className="p-3 text-gray-700 align-middle">{a.subgrupo || "-"}</td>
                   <td className="p-3 text-green-700 font-semibold align-middle">{a.energiaKcal ?? 0}</td>
