@@ -119,8 +119,6 @@ function TablaRecetasConInsumos() {
 export default function RecipeManager() {
   const { recetasConInsumos, loading, error, refetch } = useRecetasConInsumos();
 
-  // console.log("recetasConInsumos", recetasConInsumos);
-
   const [recetas, setRecetas] = useState(RECETAS_DEMO);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);

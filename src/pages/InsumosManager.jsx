@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { useInsumos } from "../hooks/useInsumos";
 import InsumoFormModal from "../components/InsumoFormModal";
-import { crearInsumo, editarInsumo, eliminarInsumo } from "../api/insumos";
 import ConfirmModal from "../components/ConfirmModal";
+import NotificationToast from "../components/NotificationToast";
 
 const ESTADOS = ["ACTIVO", "INACTIVO", "ELIMINADO", "OBSERVADO"];
 
@@ -15,61 +15,43 @@ function normalizar(str) {
 }
 
 export default function InsumoManager() {
-
-  const { insumos, loading, error, refetch } = useInsumos();
+  const { 
+    insumos, 
+    loading: loadingInsumos, 
+    error: errorInsumos, 
+    operationLoading, 
+    operationError, 
+    successMessage, 
+    saveInsumo, 
+    deleteInsumo, 
+    clearMessages 
+  } = useInsumos();
+  
   const [insumoEditando, setInsumoEditando] = useState(null);
   const [filtro, setFiltro] = useState("");
   const [pagina, setPagina] = useState(1);
   const registrosPorPagina = 10;
-  const [errorApi, setErrorApi] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [insumoAEliminar, setAlimentoAEliminar] = useState(null);
+  const [insumoAEliminar, setInsumoAEliminar] = useState(null);
 
   // --- Guardar insumo (crear o editar) ---
   const handleSave = async (insumo) => {
-    setErrorApi(null);
-    try {
-      if (!insumo.nombre?.trim()) {
-        alert("Debes poner el nombre del insumo");
-        return;
-      }
-      if (!insumo.grupo?.trim()) {
-        alert("Selecciona el grupo");
-        return;
-      }
-
-      if (!insumo.insumoId) {
-        // Nuevo insumo: llamar a la API
-        try {
-          await crearInsumo(insumo);
-          refetch(); // Recargar la lista desde la API
-        } catch (e) {
-          alert("Error al crear el insumo");
-        }
-      } else {
-        // Editar insumo existente
-        try {
-          await editarInsumo(insumo);
-          refetch();
-        } catch (e) {
-          alert("Error al editar el insumo");
-        }
-      }
+    const success = await saveInsumo(insumo, () => {
       setInsumoEditando(null);
-    } catch (e) {
-      setErrorApi(e.message || "Error inesperado");
+    });
+    
+    if (success) {
+      // El modal se cierra automáticamente en onSuccess
     }
   };
 
   // --- Eliminar insumo ---
   const handleDelete = async (insumo) => {
-    if (window.confirm("¿Eliminar insumo?")) {
-      try {
-        await eliminarInsumo(insumo);
-        refetch();
-      } catch (e) {
-        alert("Error al eliminar el insumo");
-      }
+    const success = await deleteInsumo(insumo);
+    
+    if (success) {
+      setInsumoAEliminar(null);
+      setConfirmOpen(false);
     }
   };
 
@@ -98,14 +80,7 @@ export default function InsumoManager() {
 
   const handleConfirmDelete = async () => {
     if (insumoAEliminar) {
-      try {
-        await eliminarInsumo(insumoAEliminar);
-        refetch();
-      } catch (e) {
-        alert("Error al eliminar el insumo");
-      }
-      setAlimentoAEliminar(null);
-      setConfirmOpen(false);
+      await handleDelete(insumoAEliminar);
     }
   };
 
@@ -116,12 +91,15 @@ export default function InsumoManager() {
           <PlusCircle className="mr-2 text-green-600" size={26} /> Mantenimiento de Alimentos
         </h2>
         <button
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all"
+          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all disabled:opacity-50"
           onClick={() => setInsumoEditando({ estado: "ACTIVO" })}
+          disabled={operationLoading}
         >
-          <PlusCircle size={18} className="mr-2" /> Nuevo alimento
+          <PlusCircle size={18} className="mr-2" /> 
+          {operationLoading ? "Guardando..." : "Nuevo alimento"}
         </button>
       </div>
+      
       <input
         type="text"
         className="mb-6 w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-green-300"
@@ -145,7 +123,13 @@ export default function InsumoManager() {
             </tr>
           </thead>
           <tbody>
-            {insumosPagina.length === 0 ? (
+            {loadingInsumos ? (
+              <tr>
+                <td colSpan={7} className="text-center py-8 text-gray-400">
+                  Cargando insumos...
+                </td>
+              </tr>
+            ) : insumosPagina.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-8 text-gray-400">
                   No hay insumos registrados.
@@ -162,19 +146,21 @@ export default function InsumoManager() {
                   <td className="p-3 text-yellow-700 font-semibold align-middle">{a.choCarbohidratoG ?? 0}</td>
                   <td className="p-3 flex gap-2 align-middle rounded-r-xl">
                     <button
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50"
                       onClick={() => setInsumoEditando(a)}
                       title="Editar"
+                      disabled={operationLoading}
                     >
                       <Edit size={18} />
                     </button>
                     <button
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+                      className="p-2 text-red-600 hover:bg-red-100 rounded-full disabled:opacity-50"
                       onClick={() => {
-                        setAlimentoAEliminar(a);
+                        setInsumoAEliminar(a);
                         setConfirmOpen(true);
                       }}
                       title="Eliminar"
+                      disabled={operationLoading}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -185,6 +171,7 @@ export default function InsumoManager() {
           </tbody>
         </table>
       </div>
+      
       {/* Controles de paginación */}
       <div className="flex justify-center mt-4 gap-2 items-center">
         <button
@@ -199,20 +186,37 @@ export default function InsumoManager() {
           className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
         >Siguiente</button>
       </div>
-      {/* Modal */}
+      
+      {/* Modales */}
       {insumoEditando && (
         <InsumoFormModal
           insumo={insumoEditando}
           onSave={handleSave}
           onClose={() => setInsumoEditando(null)}
+          loading={operationLoading}
         />
       )}
+      
       <ConfirmModal
         open={confirmOpen}
         title="¿Eliminar insumo?"
         message="Esta acción marcará el insumo como eliminado. ¿Deseas continuar?"
         onConfirm={handleConfirmDelete}
-        onCancel={() => { setConfirmOpen(false); setAlimentoAEliminar(null); }}
+        onCancel={() => { setConfirmOpen(false); setInsumoAEliminar(null); }}
+        loading={operationLoading}
+      />
+      
+      {/* Notificaciones */}
+      <NotificationToast
+        message={successMessage}
+        type="success"
+        onClose={clearMessages}
+      />
+      
+      <NotificationToast
+        message={operationError}
+        type="error"
+        onClose={clearMessages}
       />
     </section>
   );

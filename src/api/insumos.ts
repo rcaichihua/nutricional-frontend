@@ -8,7 +8,6 @@ export async function getInsumos(): Promise<Insumo[]> {
 }
 
 export async function crearInsumo(insumo: Insumo): Promise<Insumo> {
-  console.log("insumo", insumo);
   return fetchJson(API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -17,7 +16,6 @@ export async function crearInsumo(insumo: Insumo): Promise<Insumo> {
 }
 
 export async function editarInsumo(insumo: Insumo): Promise<Insumo> {
-  console.log("insumo", insumo);
   const res = await fetch(`${API_URL}/${insumo.insumoId}`, {
     method: "PUT",
     headers: {

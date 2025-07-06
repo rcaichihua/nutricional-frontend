@@ -54,6 +54,7 @@ export default function InsumoFormModal({ insumo, onSave, onClose }) {
                 type="text"
                 name="subgrupo"
                 value={form.subgrupo ?? ""}
+                required
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
