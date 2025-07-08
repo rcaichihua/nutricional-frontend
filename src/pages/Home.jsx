@@ -5,6 +5,7 @@ import RecipeManager from "./RecipeManager";
 import InsumosManager from "../pages/InsumosManager";
 import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
 import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";
+import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
@@ -28,7 +29,7 @@ export default function Home() {
             src={LOGO_URL}
             alt="Logo Beneficencia"
             className="h-20 sm:h-24 md:h-36 m-2 bg-white rounded-xl shadow-lg"
-            style={{ objectFit: 'contain', padding: 10, maxWidth: 120 }}
+            style={{ objectFit: "contain", padding: 10, maxWidth: 120 }}
           />
         </div>
       </div>
@@ -39,45 +40,66 @@ export default function Home() {
         <div className="w-full flex flex-wrap justify-center gap-2 md:gap-6 mb-0 mt-4">
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${activeTab === "planner"
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              ${
+                activeTab === "planner"
+                  ? "bg-blue-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             onClick={() => setActiveTab("planner")}
           >
             <Calendar size={20} /> Planificador
           </button>
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${activeTab === "recipes"
-                ? "bg-purple-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              ${
+                activeTab === "recipes"
+                  ? "bg-purple-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             onClick={() => setActiveTab("recipes")}
           >
             <BookHeart size={20} /> Gestor de Recetas
           </button>
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${activeTab === "alimentos"
-                ? "bg-green-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              ${
+                activeTab === "alimentos"
+                  ? "bg-green-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             onClick={() => setActiveTab("alimentos")}
           >
             <Apple size={20} /> Alimentos
           </button>
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${activeTab === "nutrientes"
-                ? "bg-cyan-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              ${
+                activeTab === "nutrientes"
+                  ? "bg-cyan-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             onClick={() => setActiveTab("nutrientes")}
           >
             <Sparkles size={20} /> Nutrientes
           </button>
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${activeTab === "nutrientes2"
-                ? "bg-cyan-600 text-white shadow-lg"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              ${
+                activeTab === "nutrientesReceta"
+                  ? "bg-cyan-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            onClick={() => setActiveTab("nutrientesReceta")}
+          >
+            <Sparkles size={20} /> Nutrientes Receta
+          </button>
+          <button
+            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
+              ${
+                activeTab === "nutrientes2"
+                  ? "bg-cyan-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             onClick={() => setActiveTab("nutrientes2")}
           >
             <Sparkles size={20} /> Nutrientes2
@@ -89,6 +111,7 @@ export default function Home() {
           {activeTab === "recipes" && <RecipeManager />}
           {activeTab === "alimentos" && <InsumosManager />}
           {activeTab === "nutrientes" && <MenuNutritionalDetail />}
+          {activeTab === "nutrientesReceta" && <RecetaNutritionalDetail id={1}/>}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
         </div>
       </div>

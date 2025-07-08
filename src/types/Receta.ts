@@ -1,21 +1,48 @@
 export interface Receta {
-  id?: number;
+  recetaId: number;
   nombre: string;
-  descripcion?: string;
-  fechaCreacion?: string; // Usamos string para fechas en TS, puede ser Date si se prefiere
-  usuarioCreacion?: string;
-  fechaActualizacion?: string;
-  usuarioActualizacion?: string;
+  descripcion: string | null;
+  instrucciones?: string | null;
+  tiempoPreparacionMinutos?: number | null;
+  porciones: number;
+  fechaCreacion?: string | null;
+  usuarioCreacion?: string | null;
+  fechaModificacion?: string | null;
+  usuarioModificacion?: string | null;
+  estado: string;
+  insumos: RecetaInsumoDetalleDTO[];
+  energiaKcalTotal: number;
+  aguaGTotal: number;
+  proteinaAnimalGTotal: number;
+  proteinaVegetalGTotal: number;
+  nitrogenoAnimalGTotal: number;
+  nitrogenoVegetalGTotal: number;
+  grasaAnimalGTotal: number;
+  grasaVegetalGTotal: number;
+  choCarbohidratoGTotal: number;
+  fibraGTotal: number;
+  calcioAnimalMgTotal: number;
+  calcioVegetalMgTotal: number;
+  fosforoMgTotal: number;
+  hierroHemMgTotal: number;
+  hierroNoHemMgTotal: number;
+  retinolMcgTotal: number;
+  vitaminaB1TiaminaMgTotal: number;
+  vitaminaB2RiboflavinaMgTotal: number;
+  niacinaMgTotal: number;
+  vitaminaCMgTotal: number;
+  sodioMgTotal: number;
+  potasioMgTotal: number;
+  proteinaTotalG: number;
+  grasaTotalG: number;
+  hierroTotalMg: number;
 }
 
 export interface RecetaInsumoDetalleDTO {
   insumoId: number;
+  cantidad: number;
+  unidadMedida: string | null;
   nombreInsumo: string;
-  cantidadEnReceta: number;
-  energiaKcalPor100g: number;
-  proteinaAnimalGPor100g: number;
-  proteinaVegetalGPor100g: number;
-  choCarbohidratoGPor100g: number;
 }
 
 export interface RecetaConInsumosDTO {

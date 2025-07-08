@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Save, X } from "lucide-react";
+import { SUBGRUPOS } from "../config/constants";
 
 export default function InsumoFormModal({ insumo, onSave, onClose }) {
   const [form, setForm] = useState(insumo || { estado: "ACTIVO" });
@@ -41,23 +42,29 @@ export default function InsumoFormModal({ insumo, onSave, onClose }) {
               <input
                 type="text"
                 name="grupo"
-                value={form.grupo ?? ""}
+                value={form.grupo ?? "ALIMENTOS"}
+                disabled
                 required
-                className="border rounded-lg px-3 py-2"
+                className="border rounded-lg px-3 py-2 bg-gray-100 text-gray-500"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Subgrupo */}
             <div className="flex flex-col gap-1">
               <label className="font-semibold text-gray-600">Subgrupo</label>
-              <input
-                type="text"
+              <select
                 name="subgrupo"
                 value={form.subgrupo ?? ""}
                 required
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
-              />
+              >
+                {Object.entries(SUBGRUPOS).map(([key, value]) => (
+                  <option key={key} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
             </div>
             {/* Campo: Nombre del insumo */}
             <div className="flex flex-col gap-1">
