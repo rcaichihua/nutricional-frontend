@@ -1,7 +1,15 @@
 import React from "react";
 import { X } from "lucide-react";
 
-export default function SelectRecipeModal({ open, onClose, recetas, onSelect, dia, comida, seleccionadas}) {
+export default function SelectRecipeModal({
+  open,
+  onClose,
+  recetas,
+  onSelect,
+  dia,
+  comida,
+  seleccionadas,
+}) {
   if (!open) return null;
 
   return (
@@ -20,34 +28,40 @@ export default function SelectRecipeModal({ open, onClose, recetas, onSelect, di
         </p>
         <div className="space-y-3">
           {recetas.length === 0 ? (
-            <div className="text-center text-gray-400 py-6">No hay recetas registradas</div>
+            <div className="text-center text-gray-400 py-6">
+              No hay recetas registradas
+            </div>
           ) : (
             recetas.map((receta) => {
-  // Saber si ya está agregada
-  const yaAgregada = !!(seleccionadas && seleccionadas[dia]?.[comida]?.some(r => r.id === receta.id));
-  return (
-    <button
-      key={receta.id}
-      className={
-        "w-full text-left p-4 rounded-xl border border-gray-200 transition font-semibold flex flex-col " +
-        (yaAgregada
-          ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
-          : "hover:bg-blue-50")
-      }
-      onClick={() => !yaAgregada && onSelect(receta)}
-      disabled={yaAgregada}
-    >
-      <span className="text-lg">{receta.nombre}</span>
-      <span className="text-gray-500 text-sm">
-        {receta.ingredientes && receta.ingredientes.length > 0
-          ? receta.ingredientes.map(i => i.nombre).join(", ")
-          : ""}
-      </span>
-      {yaAgregada && <span className="text-xs mt-1">Ya seleccionada</span>}
-    </button>
-  );
-})
-
+              // Saber si ya está agregada
+              const yaAgregada = !!(
+                seleccionadas &&
+                seleccionadas[dia]?.[comida]?.some((r) => r.recetaId === receta.recetaId)
+              );
+              return (
+                <button
+                  key={receta.recetaId}
+                  className={
+                    "w-full text-left p-4 rounded-xl border border-gray-200 transition font-semibold flex flex-col " +
+                    (yaAgregada
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                      : "hover:bg-blue-50")
+                  }
+                  onClick={() => !yaAgregada && onSelect(receta)}
+                  disabled={yaAgregada}
+                >
+                  <span className="text-lg">{receta.nombre}</span>
+                  <span className="text-gray-500 text-sm">
+                    {receta.insumos && receta.insumos.length > 0
+                      ? receta.insumos.map((i) => i.nombreInsumo).join(", ")
+                      : ""}
+                  </span>
+                  {yaAgregada && (
+                    <span className="text-xs mt-1">Ya seleccionada</span>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
         <button
@@ -60,4 +74,3 @@ export default function SelectRecipeModal({ open, onClose, recetas, onSelect, di
     </div>
   );
 }
-

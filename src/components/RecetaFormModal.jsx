@@ -161,6 +161,7 @@ export default function RecetaFormModal({
 
     const recetaData = {
       ...form,
+      ...(receta && receta.recetaId ? { recetaId: receta.recetaId } : {}),
       tiempoPreparacionMinutos: form.tiempoPreparacion,
       insumos: form.ingredientes
         .filter(ing => ing.insumo && ing.cantidad > 0)

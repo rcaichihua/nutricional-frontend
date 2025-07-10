@@ -5,7 +5,7 @@ import RecetaFormModal from "../components/RecetaFormModal";
 import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 import { TablaRecetasConInsumos } from "../components/TableRecetasConInsumos";
 
-export default function RecipeManager() {
+export default function RecipeManager({ onVerDetalle }) {
   const {
     recetasConInsumos,
     loadingRecetasConInsumos: loading,
@@ -96,7 +96,7 @@ export default function RecipeManager() {
             <div className="flex items-center justify-end space-x-2 mt-2">
               <button
                 className="p-2 text-green-600 hover:bg-green-100 rounded-full"
-                onClick={() => setDetalleRecetaId(receta.recetaId)}
+                onClick={() => onVerDetalle ? onVerDetalle(receta.recetaId) : setDetalleRecetaId(receta.recetaId)}
                 title="Ver detalle"
               >
                 <Eye size={18} />

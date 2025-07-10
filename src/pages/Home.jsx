@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookHeart, Calendar, Apple, Sparkles } from "lucide-react";
+import { BookHeart, Calendar, Apple, Sparkles, HeartPlus } from "lucide-react";
 import MenuPlanner from "../components/MenuPlanner";
 import RecipeManager from "./RecipeManager";
 import InsumosManager from "../pages/InsumosManager";
@@ -9,6 +9,7 @@ import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
+  const [recetaDetalleId, setRecetaDetalleId] = useState(null); // Nuevo estado para el id de receta
   const LOGO_URL = "/logo-blima.jpg";
 
   return (
@@ -21,7 +22,7 @@ export default function Home() {
             Sociedad de Beneficencia de Lima
           </h1>
           <p className="text-base sm:text-lg text-blue-100 mb-2 font-semibold text-center md:text-left">
-            Sistema profesional de gestión de menús y nutrición
+          Programa Social de Apoyo Alimentario y Nutricional
           </p>
         </div>
         <div className="w-full md:w-auto flex justify-center md:justify-end">
@@ -42,7 +43,7 @@ export default function Home() {
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
                 activeTab === "planner"
-                  ? "bg-blue-600 text-white shadow-lg"
+                  ? "bg-amber-400 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             onClick={() => setActiveTab("planner")}
@@ -71,7 +72,7 @@ export default function Home() {
           >
             <Apple size={20} /> Alimentos
           </button>
-          <button
+          {/* <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
                 activeTab === "nutrientes"
@@ -81,8 +82,8 @@ export default function Home() {
             onClick={() => setActiveTab("nutrientes")}
           >
             <Sparkles size={20} /> Nutrientes
-          </button>
-          <button
+          </button> */}
+          {/* <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
                 activeTab === "nutrientesReceta"
@@ -92,7 +93,7 @@ export default function Home() {
             onClick={() => setActiveTab("nutrientesReceta")}
           >
             <Sparkles size={20} /> Nutrientes Receta
-          </button>
+          </button> */}
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
@@ -102,16 +103,26 @@ export default function Home() {
               }`}
             onClick={() => setActiveTab("nutrientes2")}
           >
-            <Sparkles size={20} /> Nutrientes2
+            <HeartPlus size={20} /> Mejoras
           </button>
         </div>
         {/* Content */}
         <div className="w-full p-4 md:p-8">
           {activeTab === "planner" && <MenuPlanner />}
-          {activeTab === "recipes" && <RecipeManager />}
+          {activeTab === "recipes" && (
+            <RecipeManager
+              onVerDetalle={(id) => {
+                setRecetaDetalleId(id);
+                setActiveTab("nutrientesReceta");
+              }}
+            />
+          )}
           {activeTab === "alimentos" && <InsumosManager />}
           {activeTab === "nutrientes" && <MenuNutritionalDetail />}
-          {activeTab === "nutrientesReceta" && <RecetaNutritionalDetail id={1}/>}
+          {activeTab === "nutrientesReceta" &&
+            recetaDetalleId && (
+              <RecetaNutritionalDetail id={recetaDetalleId} />
+            )}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
         </div>
       </div>

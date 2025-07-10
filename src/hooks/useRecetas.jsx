@@ -128,7 +128,7 @@ export function useRecetas() {
 
   // Guardar (crear o editar)
   const saveReceta = async (receta, onSuccess) => {
-    if (receta.id) {
+    if (receta.recetaId) {
       return await updateReceta(receta, onSuccess);
     } else {
       return await createReceta(receta, onSuccess);

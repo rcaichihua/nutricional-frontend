@@ -76,9 +76,9 @@ export const DATA_TYPES = {
 export const UNITS = {
   GRAMOS: 'g',
   KILOGRAMOS: 'kg',
-  MILILITROS: 'ml',
+  MILILITROS: 'mL',
   LITROS: 'l',
-  UNIDADES: 'un',
+  UNIDADES: 'ud',
   CUCHARADAS: 'cda',
   CUCHARADITAS: 'cdita',
 };
