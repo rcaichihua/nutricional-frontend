@@ -15,8 +15,6 @@ export default function RecipeManager({ onVerDetalle }) {
     deleteReceta,
   } = useRecetas();
 
-  // console.log("recetasConInsumos de useRecetas", recetasConInsumos);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReceta, setSelectedReceta] = useState(null);
   const [detalleRecetaId, setDetalleRecetaId] = useState(null);

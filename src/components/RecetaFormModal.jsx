@@ -10,7 +10,6 @@ export default function RecetaFormModal({
   isOpen = false 
 }) {
   const { insumos, loading: insumosLoading } = useInsumos();
-  // console.log("Recibiendo receta", receta);
   
   // Estado del formulario
   const [form, setForm] = useState({

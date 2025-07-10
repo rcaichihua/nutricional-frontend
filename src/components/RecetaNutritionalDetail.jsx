@@ -51,7 +51,6 @@ export default function RecetaNutritionalDetail({ id }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  console.log("Receta", receta);
   useEffect(() => {
     if (!id) return;
     setLoading(true);
