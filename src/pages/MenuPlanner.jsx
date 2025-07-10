@@ -1,23 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { User2, PlusCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRecetas } from "../hooks/useRecetas";
 import { getMenus, crearMenu, editarMenu } from "../api/menus";
-import SelectRecipeModal from "./SelectRecipeModal";
+import SelectRecipeModal from "../components/SelectRecipeModal";
 
-const diasSemana = [
-  "Lunes",
-  "Martes",
-  "Miércoles",
-  "Jueves",
-  "Viernes",
-  "Sábado",
-  "Domingo",
+// Mover constantes fuera del componente
+const DIAS_SEMANA = [
+  "Lunes", "Martes", "Miércoles", "Jueves", 
+  "Viernes", "Sábado", "Domingo"
 ];
-const comidas = [
+
+const COMIDAS = [
   { tipo: "Desayuno", color: "text-blue-700" },
-  // { tipo: "Media mañana", color: "text-blue-700" },
   { tipo: "Almuerzo", color: "text-blue-700" },
-  // { tipo: "Media tarde", color: "text-blue-700" },
   { tipo: "Cena", color: "text-blue-700" },
 ];
 
@@ -28,20 +23,21 @@ export default function MenuPlanner() {
   const [semanaSeleccionada, setSemanaSeleccionada] = useState(() => {
     const hoy = new Date();
     const lunes = new Date(hoy);
-    lunes.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes de esta semana
+    // Corregir el cálculo del lunes (0 = domingo, 1 = lunes, etc.)
+    const diaSemana = hoy.getDay();
+    const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+    lunes.setDate(hoy.getDate() - diasHastaLunes);
     return lunes;
   });
 
   const [comensales, setComensales] = useState(
-    diasSemana.reduce((acc, dia) => ({ ...acc, [dia]: 700 }), {})
+    DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 700 }), {})
   );
 
-  // Ahora cada comida es un arreglo de recetasConInsumos
   const [seleccionadas, setSeleccionadas] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInfo, setModalInfo] = useState({ dia: "", comida: "" });
 
-  // Estado para el guardado
   const [guardando, setGuardando] = useState({});
 
   // Estado para almacenar los menús obtenidos
@@ -56,7 +52,7 @@ export default function MenuPlanner() {
         const menusObtenidos = await getMenus();
         setMenus(menusObtenidos);
       } catch (error) {
-        console.error('Error al obtener menús:', error);
+        // Error al obtener menús
       } finally {
         setCargandoMenus(false);
       }
@@ -64,34 +60,6 @@ export default function MenuPlanner() {
 
     obtenerMenus();
   }, []);
-
-  // Función para cargar recetas de un menú específico según la fecha
-  const cargarRecetasDeMenu = (fecha) => {
-    const menuEncontrado = menus.find(menu => menu.fechaMenu === fecha);
-    if (menuEncontrado) {
-      const recetasOrganizadas = {};
-      
-      // Inicializar arrays vacíos para cada tipo de comida
-      comidas.forEach(({ tipo }) => {
-        recetasOrganizadas[tipo] = [];
-      });
-      
-      // Organizar recetas por tipo de comida
-      menuEncontrado.recetas.forEach(recetaMenu => {
-        const tipoComida = recetaMenu.tipoComida;
-        if (recetasOrganizadas[tipoComida]) {
-          // Buscar la receta completa en recetasConInsumos
-          const recetaCompleta = recetasConInsumos.find(r => r.recetaId === recetaMenu.recetaId);
-          if (recetaCompleta) {
-            recetasOrganizadas[tipoComida].push(recetaCompleta);
-          }
-        }
-      });
-      
-      return recetasOrganizadas;
-    }
-    return null;
-  };
 
   // Función para obtener las fechas de la semana
   const obtenerFechasSemana = (fechaInicio) => {
@@ -104,7 +72,6 @@ export default function MenuPlanner() {
     return fechas;
   };
 
-  // Función para formatear fecha
   const formatearFecha = (fecha) => {
     return fecha.toLocaleDateString('es-ES', { 
       day: '2-digit', 
@@ -113,9 +80,53 @@ export default function MenuPlanner() {
   };
 
   // Función para formatear fecha en formato YYYY-MM-DD
-  const formatearFechaISO = (fecha) => {
-    return fecha.toISOString().split('T')[0];
-  };
+  const formatearFechaISO = useCallback((fecha) => {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  // Memoizar fechas de la semana
+  const fechasSemana = useMemo(() => 
+    obtenerFechasSemana(semanaSeleccionada), 
+    [semanaSeleccionada]
+  );
+
+ 
+  // Memoizar función de verificación de recetas
+  const tieneRecetas = useCallback((dia) => {
+    const recetasDia = seleccionadas[dia];
+    if (!recetasDia) return false;
+    return Object.values(recetasDia).some(recetas => recetas && recetas.length > 0);
+  }, [seleccionadas]);
+
+  // Memoizar función de carga de recetas
+  const cargarRecetasDeMenuMemo = useCallback((fecha) => {
+    const menuEncontrado = menus.find(menu => menu.fechaMenu === fecha);
+    
+    if (menuEncontrado) {
+      const recetasOrganizadas = {};
+      
+      COMIDAS.forEach(({ tipo }) => {
+        recetasOrganizadas[tipo] = [];
+      });
+      
+      menuEncontrado.recetas.forEach(recetaMenu => {
+        const tipoComida = recetaMenu.tipoComida;
+        
+        if (recetasOrganizadas[tipoComida]) {
+          const recetaCompleta = recetasConInsumos.find(r => r.recetaId === recetaMenu.recetaId);
+          if (recetaCompleta) {
+            recetasOrganizadas[tipoComida].push(recetaCompleta);
+          }
+        }
+      });
+      
+      return recetasOrganizadas;
+    }
+    return null;
+  }, [menus, recetasConInsumos]);
 
   // Navegar a la semana anterior
   const semanaAnterior = () => {
@@ -131,48 +142,53 @@ export default function MenuPlanner() {
     setSemanaSeleccionada(nuevaSemana);
   };
 
-  // Obtener fechas de la semana actual
-  const fechasSemana = obtenerFechasSemana(semanaSeleccionada);
-
-  // Cargar recetas existentes cuando cambie la semana
+  // Optimizar el useEffect para evitar cálculos innecesarios
   useEffect(() => {
     const nuevasSeleccionadas = {};
     
+    // Usar Map para búsquedas más eficientes
+    const menusMap = new Map(menus.map(menu => [menu.fechaMenu, menu]));
+    
     fechasSemana.forEach((fecha, index) => {
-      const dia = diasSemana[index];
+      const dia = DIAS_SEMANA[index];
       const fechaISO = formatearFechaISO(fecha);
-      const recetasCargadas = cargarRecetasDeMenu(fechaISO);
       
-      if (recetasCargadas) {
-        nuevasSeleccionadas[dia] = recetasCargadas;
+      const menuEncontrado = menusMap.get(fechaISO);
+      
+      if (menuEncontrado) {
+        const recetasOrganizadas = {};
+        
+        COMIDAS.forEach(({ tipo }) => {
+          recetasOrganizadas[tipo] = [];
+        });
+        
+        menuEncontrado.recetas.forEach(recetaMenu => {
+          const tipoComida = recetaMenu.tipoComida;
+          
+          if (recetasOrganizadas[tipoComida]) {
+            const recetaCompleta = recetasConInsumos.find(r => r.recetaId === recetaMenu.recetaId);
+            if (recetaCompleta) {
+              recetasOrganizadas[tipoComida].push(recetaCompleta);
+            }
+          }
+        });
+        
+        nuevasSeleccionadas[dia] = recetasOrganizadas;
       }
     });
     
     setSeleccionadas(nuevasSeleccionadas);
-  }, [semanaSeleccionada, menus, recetasConInsumos]);
-
-  // Función para verificar si un día tiene menú guardado
-  const tieneMenuGuardado = (dia) => {
-    const fechaDia = fechasSemana[diasSemana.indexOf(dia)];
-    const fechaFormateada = fechaDia.toISOString().split('T')[0];
-    return menus.some(menu => menu.fechaMenu === fechaFormateada);
-  };
-
-  // Función para obtener el menú de un día específico
-  const obtenerMenuDelDia = (dia) => {
-    const fechaDia = fechasSemana[diasSemana.indexOf(dia)];
-    const fechaFormateada = fechaDia.toISOString().split('T')[0];
-    return menus.find(menu => menu.fechaMenu === fechaFormateada);
-  };
+  }, [semanaSeleccionada, menus, recetasConInsumos, formatearFechaISO]);
 
   // Función para guardar un día específico
-  const handleGuardarDia = async (dia) => {
+  const handleGuardarDia = useCallback(async (dia) => {
     setGuardando(prev => ({ ...prev, [dia]: true }));
     
     try {
       // Obtener la fecha del día seleccionado
-      const fechaDia = fechasSemana[diasSemana.indexOf(dia)];
-      const fechaFormateada = fechaDia.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      const indexDia = DIAS_SEMANA.indexOf(dia);
+      const fechaDia = fechasSemana[indexDia];
+      const fechaFormateada = formatearFechaISO(fechaDia);
       
       // Verificar si ya existe un menú para esta fecha
       const menuExistente = menus.find(menu => menu.fechaMenu === fechaFormateada);
@@ -182,7 +198,7 @@ export default function MenuPlanner() {
       const recetasDia = seleccionadas[dia] || {};
       
       // Recorrer cada tipo de comida
-      comidas.forEach(({ tipo }) => {
+      COMIDAS.forEach(({ tipo }) => {
         const recetasComida = recetasDia[tipo] || [];
         recetasComida.forEach((receta, index) => {
           todasLasRecetas.push({
@@ -234,29 +250,19 @@ export default function MenuPlanner() {
       }
       
     } catch (error) {
-      console.error('Error al guardar:', error);
       alert('Error al guardar el menú');
     } finally {
       setGuardando(prev => ({ ...prev, [dia]: false }));
     }
-  };
+  }, [fechasSemana, formatearFechaISO, menus, seleccionadas]);
 
-  // Función para verificar si un día tiene recetas
-  const tieneRecetas = (dia) => {
-    const recetasDia = seleccionadas[dia];
-    if (!recetasDia) return false;
-    
-    return Object.values(recetasDia).some(recetas => recetas && recetas.length > 0);
-  };
-
-  // Abre el modal para el día y comida seleccionada
-  const handleAbrirModal = (dia, comida) => {
+  // Memoizar handlers para evitar re-renders innecesarios
+  const handleAbrirModal = useCallback((dia, comida) => {
     setModalInfo({ dia, comida });
     setModalOpen(true);
-  };
+  }, []);
 
-  // Agrega receta (pueden repetirse, pero puedes filtrar si quieres)
-  const handleSeleccionarReceta = (receta) => {
+  const handleSeleccionarReceta = useCallback((receta) => {
     setSeleccionadas((prev) => {
       const recetasPorComida = prev[modalInfo.dia]?.[modalInfo.comida] || [];
       // Validar si ya existe esa receta para este día y comida
@@ -273,10 +279,9 @@ export default function MenuPlanner() {
       };
     });
     setModalOpen(false);
-  };
+  }, [modalInfo.dia, modalInfo.comida]);
 
-  // Elimina una receta puntual
-  const handleEliminarReceta = (dia, comida, recetaIdx) => {
+  const handleEliminarReceta = useCallback((dia, comida, recetaIdx) => {
     setSeleccionadas((prev) => {
       const nuevas = [...(prev[dia]?.[comida] || [])];
       nuevas.splice(recetaIdx, 1);
@@ -288,7 +293,7 @@ export default function MenuPlanner() {
         },
       };
     });
-  };
+  }, []);
 
   return (
     <section>
@@ -330,7 +335,7 @@ export default function MenuPlanner() {
         </div>
       ) : (
         <div className="space-y-8">
-        {diasSemana.map((dia, index) => (
+        {DIAS_SEMANA.map((dia, index) => (
           <div
             key={dia}
             className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-4"
@@ -370,7 +375,7 @@ export default function MenuPlanner() {
             </div>
             {/* Comidas */}
             <div className="flex flex-col md:flex-row gap-4">
-              {comidas.map(({ tipo, color }) => (
+              {COMIDAS.map(({ tipo, color }) => (
                 <div key={tipo} className="flex-1 flex flex-col gap-2">
                   <span className={`font-semibold ${color}`}>{tipo}</span>
                   {/* Lista de recetasConInsumos para esta comida */}
@@ -440,7 +445,7 @@ export default function MenuPlanner() {
         dia={modalInfo.dia}
         comida={modalInfo.comida}
         onSelect={handleSeleccionarReceta}
-        seleccionadas={seleccionadas} // <--- aquí
+        seleccionadas={seleccionadas}
       />
     </section>
   );

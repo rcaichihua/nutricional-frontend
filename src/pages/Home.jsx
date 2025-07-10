@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { BookHeart, Calendar, Apple, Sparkles, HeartPlus } from "lucide-react";
-import MenuPlanner from "../components/MenuPlanner";
+import { BookHeart, Calendar, Apple, Sparkles, HeartPlus, ChartLine, CalendarDays } from "lucide-react";
+import MenuPlanner from "./MenuPlanner";
 import RecipeManager from "./RecipeManager";
 import InsumosManager from "../pages/InsumosManager";
 import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
 import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";
 import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
+import Reports from "./Calendar";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
@@ -98,12 +99,23 @@ export default function Home() {
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
                 activeTab === "nutrientes2"
-                  ? "bg-cyan-600 text-white shadow-lg"
+                  ? "bg-cyan-500 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             onClick={() => setActiveTab("nutrientes2")}
           >
             <HeartPlus size={20} /> Mejoras
+          </button>
+          <button
+            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
+              ${
+                activeTab === "calendar"
+                  ? "bg-red-500 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            onClick={() => setActiveTab("calendar")}
+          >
+            <CalendarDays size={20} /> Calendario
           </button>
         </div>
         {/* Content */}
@@ -124,6 +136,7 @@ export default function Home() {
               <RecetaNutritionalDetail id={recetaDetalleId} />
             )}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
+          {activeTab === "calendar" && <Reports />}
         </div>
       </div>
     </div>
