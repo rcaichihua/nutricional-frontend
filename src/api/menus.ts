@@ -1,7 +1,8 @@
+import { API_URL_BASE } from "../config/constants";
 import { Menu } from "../types/Menu";
 import { fetchJson } from "./fetchUtils";
 
-const API_URL = "http://localhost:8080/api/menus";
+const API_URL = `${API_URL_BASE}/menus`;
 
 export async function getMenus(): Promise<Menu[]> {
   return fetchJson(API_URL);

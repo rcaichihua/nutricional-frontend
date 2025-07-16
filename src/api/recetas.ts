@@ -1,8 +1,8 @@
+import { API_URL_BASE } from "../config/constants";
 import { Receta, RecetaConInsumosDTO } from "../types/Receta";
 import { fetchJson } from "./fetchUtils";
 
-// api/recetas.js
-const API_URL = "http://localhost:8080/api/recetas";
+const API_URL = `${API_URL_BASE}/recetas`;
 
 export async function getRecetas(): Promise<Receta[]> {
   return fetchJson(API_URL);

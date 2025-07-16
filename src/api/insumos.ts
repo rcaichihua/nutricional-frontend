@@ -1,7 +1,8 @@
+import { API_URL_BASE } from "../config/constants";
 import { Insumo } from "../types/Insumo";
 import { fetchJson } from "./fetchUtils";
 
-const API_URL = "http://localhost:8080/api/insumos";
+const API_URL = `${API_URL_BASE}/insumos`;
 
 export async function getInsumos(): Promise<Insumo[]> {
   return fetchJson(API_URL);
