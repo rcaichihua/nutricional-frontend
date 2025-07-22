@@ -1,5 +1,6 @@
 // Variables globales de configuración
 export const API_URL_BASE = "http://192.168.1.6:8080/api";
+// export const API_URL_BASE = "http://localhost:8080/api";
 export const APP_CONFIG = {
   // Configuración de la aplicación
   APP_NAME: 'Nutricional Frontend',

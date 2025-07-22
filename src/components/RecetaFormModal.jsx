@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Save, X, PlusCircle, Trash2 } from "lucide-react";
 import { useInsumos } from "../hooks/useInsumos";
-import { UNITS } from "../config/constants";
+import { UNITS, SUBGRUPOS } from "../config/constants";
 
 export default function RecetaFormModal({ 
   receta, 
@@ -10,6 +10,9 @@ export default function RecetaFormModal({
   isOpen = false 
 }) {
   const { insumos, loading: insumosLoading } = useInsumos();
+
+  // Estado para filtro de subgrupos por ingrediente
+  const [subgrupoFilters, setSubgrupoFilters] = useState([""]);
   
   // Estado del formulario
   const [form, setForm] = useState({
@@ -44,6 +47,11 @@ export default function RecetaFormModal({
             }))
           : [{ insumo: null, cantidad: "", unidad: "g" }]
       });
+      setSubgrupoFilters(
+        receta.insumos?.length > 0
+          ? receta.insumos.map(() => "")
+          : [""]
+      );
     } else {
       setForm({
         nombre: "",
@@ -53,6 +61,7 @@ export default function RecetaFormModal({
         tiempoPreparacion: 30,
         ingredientes: [{ insumo: null, cantidad: "", unidad: "g" }]
       });
+      setSubgrupoFilters([""]);
     }
     setErrors({});
   }, [receta]);
@@ -115,23 +124,29 @@ export default function RecetaFormModal({
     }
   };
 
+  // Manejar cambio de filtro de subgrupo para un ingrediente
+  const handleSubgrupoFilterChange = (index, value) => {
+    setSubgrupoFilters(prev => {
+      const updated = [...prev];
+      updated[index] = value;
+      return updated;
+    });
+  };
+
   // Agregar ingrediente
   const addIngredient = () => {
     setForm(prev => ({
       ...prev,
       ingredientes: [...prev.ingredientes, { insumo: null, cantidad: "", unidad: "g" }]
     }));
-    
-    // Scroll suave al nuevo ingrediente después de que se renderice
+    setSubgrupoFilters(prev => [...prev, ""]);
     setTimeout(() => {
       const formContainer = document.querySelector('.receta-form-content');
       if (formContainer) {
-        // Calcular la posición para mostrar el nuevo ingrediente
         const scrollPosition = Math.min(
           formContainer.scrollHeight - formContainer.clientHeight,
-          formContainer.scrollTop + 200 // Scroll solo 200px hacia abajo
+          formContainer.scrollTop + 200
         );
-        
         formContainer.scrollTo({
           top: scrollPosition,
           behavior: 'smooth'
@@ -147,6 +162,7 @@ export default function RecetaFormModal({
         ...prev,
         ingredientes: prev.ingredientes.filter((_, i) => i !== index)
       }));
+      setSubgrupoFilters(prev => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -309,66 +325,87 @@ export default function RecetaFormModal({
               </div>
             ) : (
               <div className="space-y-3">
-                {form.ingredientes.map((ingrediente, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg"
-                  >
-                    {/* Select insumo */}
-                    <select
-                      className="border border-gray-300 rounded-lg px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={ingrediente.insumo?.insumoId || ""}
-                      onChange={(e) => {
-                        const selectedInsumo = insumos.find(
-                          insumo => insumo.insumoId === parseInt(e.target.value)
-                        );
-                        handleIngredientChange(index, "insumo", selectedInsumo);
-                      }}
+                {form.ingredientes.map((ingrediente, index) => {
+                  // Filtrar insumos por subgrupo seleccionado
+                  const subgrupoValue = subgrupoFilters[index] || "";
+                  const filteredInsumos = subgrupoValue
+                    ? insumos.filter(insumo => insumo.subgrupo === subgrupoValue)
+                    : insumos;
+                  return (
+                    <div
+                      key={index}
+                      className="flex flex-col gap-1 bg-gray-50 p-3 rounded-lg"
                     >
-                      <option value="">Selecciona insumo</option>
-                      {insumos.map((insumo) => (
-                        <option value={insumo.insumoId} key={insumo.insumoId}>
-                          {insumo.nombre}
-                        </option>
-                      ))}
-                    </select>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+                        {/* Filtro de subgrupo */}
+                        <select
+                          className="border border-gray-300 rounded-lg px-2 py-2 text-xs w-full sm:max-w-[160px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={subgrupoValue}
+                          onChange={e => handleSubgrupoFilterChange(index, e.target.value)}
+                        >
+                          <option value="">Todos los subgrupos</option>
+                          {Object.entries(SUBGRUPOS).map(([key, value]) => (
+                            <option key={key} value={value}>{value}</option>
+                          ))}
+                        </select>
 
-                    {/* Cantidad */}
-                    <input
-                      type="number"
-                      min="0.1"
-                      step="0.1"
-                      className="border border-gray-300 rounded-lg w-24 px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Cantidad"
-                      value={ingrediente.cantidad}
-                      onChange={(e) => handleIngredientChange(index, "cantidad", parseFloat(e.target.value) || "")}
-                    />
+                        {/* Select insumo */}
+                        <select
+                          className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={ingrediente.insumo?.insumoId || ""}
+                          onChange={(e) => {
+                            const selectedInsumo = insumos.find(
+                              insumo => insumo.insumoId === parseInt(e.target.value)
+                            );
+                            handleIngredientChange(index, "insumo", selectedInsumo);
+                          }}
+                        >
+                          <option value="">Selecciona insumo</option>
+                          {filteredInsumos.map((insumo) => (
+                            <option value={insumo.insumoId} key={insumo.insumoId}>
+                              {insumo.nombre}
+                            </option>
+                          ))}
+                        </select>
 
-                    {/* Unidad */}
-                    <select
-                      className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={ingrediente.unidad}
-                      onChange={(e) => handleIngredientChange(index, "unidad", e.target.value)}
-                    >
-                      {Object.entries(UNITS).map(([key, value]) => (
-                        <option key={key} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
+                        {/* Cantidad */}
+                        <input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          className="border border-gray-300 rounded-lg w-full sm:w-24 px-3 py-2 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Cantidad"
+                          value={ingrediente.cantidad}
+                          onChange={(e) => handleIngredientChange(index, "cantidad", parseFloat(e.target.value) || "")}
+                        />
 
-                    {/* Botón eliminar */}
-                    {form.ingredientes.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeIngredient(index)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                        {/* Unidad */}
+                        <select
+                          className="border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={ingrediente.unidad}
+                          onChange={(e) => handleIngredientChange(index, "unidad", e.target.value)}
+                        >
+                          {Object.entries(UNITS).map(([key, value]) => (
+                            <option key={key} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Botón eliminar */}
+                        {form.ingredientes.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeIngredient(index)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
 
                 {/* Botón agregar ingrediente */}
                 <button
