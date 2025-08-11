@@ -1,3 +1,5 @@
+import { RecetaConInsumosDTO } from "./Receta";
+
 export interface Menu {
   menuId: number;
   nombreMenu: string;
@@ -19,4 +21,14 @@ export interface MenuReceta {
   tipoComida: string;
   orden: number;
   nombreReceta: string;
+}
+
+export interface MenuRecetasInsumosDTO {
+	menuId: number;
+	fechaMenu: string;
+	nombreMenu: string;
+	descripcion: string;
+	tipoMenu: string;
+	estado: string;
+  recetas: RecetaConInsumosDTO[];
 }

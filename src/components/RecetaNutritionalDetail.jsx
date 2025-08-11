@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { Printer } from "lucide-react";
+// Importar html2pdf.js dinámicamente
+// Si no está instalado, instalar con: npm install html2pdf.js
 import { useRecetas } from "../hooks/useRecetas";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { COLORSCHART } from "../config/constants";
 
 // 🧈 Macronutrientes
 const MACRONUTRIENTES = [
-  { label: "Energía (kcal)", key: "energiaKcalTotal" },
-  { label: "Agua", key: "aguaGTotal" },
+  // { label: "Energía (kcal)", key: "energiaKcalTotal" },
+  // { label: "Agua", key: "aguaGTotal" },
   { label: "Proteína animal", key: "proteinaAnimalGTotal" },
   { label: "Proteína vegetal", key: "proteinaVegetalGTotal" },
   { label: "Proteína total", key: "proteinaTotalG" },
@@ -14,7 +19,7 @@ const MACRONUTRIENTES = [
   { label: "Grasa vegetal", key: "grasaVegetalGTotal" },
   { label: "Grasa total", key: "grasaTotalG" },
   { label: "Carbohidratos", key: "choCarbohidratoGTotal" },
-  { label: "Fibra", key: "fibraGTotal" },
+  // { label: "Fibra", key: "fibraGTotal" },
 ];
 
 // 🧪 Vitaminas (Micronutrientes)
@@ -40,11 +45,32 @@ const MINERALES = [
 
 // ⚗️ Compuestos especiales
 const COMPUESTOS_ESPECIALES = [
-  { label: "Nitrógeno animal", key: "nitrogenoAnimalGTotal" },
-  { label: "Nitrógeno vegetal", key: "nitrogenoVegetalGTotal" },
+  { label: "Agua", key: "aguaGTotal" },
+  { label: "Fibra", key: "fibraGTotal" },
+  // { label: "Nitrógeno animal", key: "nitrogenoAnimalGTotal" },
+  // { label: "Nitrógeno vegetal", key: "nitrogenoVegetalGTotal" },
+  // { label: "Agua", key: "nitrogenoAnimalGTotal" },
+  // { label: "Fibra", key: "nitrogenoVegetalGTotal" },
 ];
 
 export default function RecetaNutritionalDetail({ id }) {
+  const printRef = useRef();
+  // Handler para imprimir y descargar PDF usando jspdf y html2canvas
+  const handleDownloadPDF = async () => {
+    if (printRef.current) {
+      const canvas = await html2canvas(printRef.current, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      // Calcular tamaño para A4
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      // Ajustar imagen al ancho de la página
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`${receta?.nombre || 'receta'}-nutricional.pdf`);
+    }
+  };
   const { getRecetaConInsumoById } = useRecetas();
 
   const [receta, setReceta] = useState(null);
@@ -72,16 +98,16 @@ export default function RecetaNutritionalDetail({ id }) {
     {
       name: "Proteínas",
       value:
-        receta.proteinaTotalG ??
-        receta.proteinaAnimalGTotal + receta.proteinaVegetalGTotal ??
-        0,
+        receta.proteinaTotalG != null
+          ? receta.proteinaTotalG
+          : ((receta.proteinaAnimalGTotal ?? 0) + (receta.proteinaVegetalGTotal ?? 0)),
     },
     {
       name: "Lípidos",
       value:
-        receta.grasaTotalG ??
-        receta.grasaAnimalGTotal + receta.grasaVegetalGTotal ??
-        0,
+        receta.grasaTotalG != null
+          ? receta.grasaTotalG
+          : ((receta.grasaAnimalGTotal ?? 0) + (receta.grasaVegetalGTotal ?? 0)),
     },
   ];
 
@@ -93,68 +119,56 @@ export default function RecetaNutritionalDetail({ id }) {
       cantidad: `${receta.choCarbohidratoGTotal ?? 0} g`,
       kcal: ((receta.choCarbohidratoGTotal ?? 0) * 4).toFixed(0),
       percent: receta.energiaKcalTotal
-        ? (
-            ((receta.choCarbohidratoGTotal ?? 0) * 4 * 100) /
-            receta.energiaKcalTotal
-          ).toFixed(1) + "%"
+        ? (((receta.choCarbohidratoGTotal ?? 0) * 4 * 100) / receta.energiaKcalTotal).toFixed(1) + "%"
         : "0%",
     },
     {
       name: "Proteínas",
       color: COLORSCHART[1],
-      cantidad: `${
-        receta.proteinaTotalG ??
-        receta.proteinaAnimalGTotal + receta.proteinaVegetalGTotal ??
-        0
-      } g`,
-      kcal: (
-        (receta.proteinaTotalG ??
-          receta.proteinaAnimalGTotal + receta.proteinaVegetalGTotal ??
-          0) * 4
-      ).toFixed(0),
+      cantidad: `${receta.proteinaTotalG != null
+        ? receta.proteinaTotalG
+        : ((receta.proteinaAnimalGTotal ?? 0) + (receta.proteinaVegetalGTotal ?? 0))} g`,
+      kcal: ((receta.proteinaTotalG != null
+        ? receta.proteinaTotalG
+        : ((receta.proteinaAnimalGTotal ?? 0) + (receta.proteinaVegetalGTotal ?? 0))) * 4).toFixed(0),
       percent: receta.energiaKcalTotal
-        ? (
-            ((receta.proteinaTotalG ??
-              receta.proteinaAnimalGTotal + receta.proteinaVegetalGTotal ??
-              0) *
-              4 *
-              100) /
-            receta.energiaKcalTotal
-          ).toFixed(1) + "%"
+        ? (((receta.proteinaTotalG != null
+            ? receta.proteinaTotalG
+            : ((receta.proteinaAnimalGTotal ?? 0) + (receta.proteinaVegetalGTotal ?? 0))) * 4 * 100) / receta.energiaKcalTotal).toFixed(1) + "%"
         : "0%",
     },
     {
       name: "Lípidos",
       color: COLORSCHART[2],
-      cantidad: `${
-        receta.grasaTotalG ??
-        receta.grasaAnimalGTotal + receta.grasaVegetalGTotal ??
-        0
-      } g`,
-      kcal: (
-        (receta.grasaTotalG ??
-          receta.grasaAnimalGTotal + receta.grasaVegetalGTotal ??
-          0) * 9
-      ).toFixed(0),
+      cantidad: `${receta.grasaTotalG != null
+        ? receta.grasaTotalG
+        : ((receta.grasaAnimalGTotal ?? 0) + (receta.grasaVegetalGTotal ?? 0))} g`,
+      kcal: ((receta.grasaTotalG != null
+        ? receta.grasaTotalG
+        : ((receta.grasaAnimalGTotal ?? 0) + (receta.grasaVegetalGTotal ?? 0))) * 9).toFixed(0),
       percent: receta.energiaKcalTotal
-        ? (
-            ((receta.grasaTotalG ??
-              receta.grasaAnimalGTotal + receta.grasaVegetalGTotal ??
-              0) *
-              9 *
-              100) /
-            receta.energiaKcalTotal
-          ).toFixed(1) + "%"
+        ? (((receta.grasaTotalG != null
+            ? receta.grasaTotalG
+            : ((receta.grasaAnimalGTotal ?? 0) + (receta.grasaVegetalGTotal ?? 0))) * 9 * 100) / receta.energiaKcalTotal).toFixed(1) + "%"
         : "0%",
     },
   ];
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
+    <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8" ref={printRef}>
+      <div className="flex justify-end mb-4">
+        <button
+          className="p-2 text-yellow-500 hover:bg-blue-100 rounded-full print:hidden"
+          onClick={handleDownloadPDF}
+          title="Imprimir"
+        >
+          <Printer size={20} />
+        </button>
+      </div>
       {/* Encabezado menú */}
       <div className="mb-8 text-center">
         <b className="block text-xl">{receta.nombre}</b>
-        <div className="mt-2">
+        {/* <div className="mt-2">
           <span className="underline">Insumos</span>:
           {receta.insumos && receta.insumos.length > 0 && (
             <div className="flex flex-wrap justify-center gap-2 mt-2">
@@ -174,7 +188,7 @@ export default function RecetaNutritionalDetail({ id }) {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </div>
 
       {/* Gráfico y tabla resumen */}
@@ -305,7 +319,7 @@ export default function RecetaNutritionalDetail({ id }) {
               >
                 {m.label}
                 <br />
-                <span className="text-xs font-semibold">{receta[m.key]} mg</span>
+                <span className="text-xs font-semibold">{receta[m.key]} g</span>
               </div>
             ))}
           </div>

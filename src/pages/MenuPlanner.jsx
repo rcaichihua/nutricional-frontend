@@ -52,7 +52,7 @@ export default function MenuPlanner() {
         const menusObtenidos = await getMenus();
         setMenus(menusObtenidos);
       } catch (error) {
-        // Error al obtener menús
+        console.log("Error al obtener menús:", error);
       } finally {
         setCargandoMenus(false);
       }
@@ -250,7 +250,7 @@ export default function MenuPlanner() {
       }
       
     } catch (error) {
-      alert('Error al guardar el menú');
+      alert('Error al guardar el menú', error);
     } finally {
       setGuardando(prev => ({ ...prev, [dia]: false }));
     }

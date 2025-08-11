@@ -25,15 +25,13 @@ export async function crearReceta(receta: Receta): Promise<Receta> {
 }
 
 export async function editarReceta(receta: Receta): Promise<Receta> {
-  const res = await fetch(`${API_URL}/${receta.recetaId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(receta),
-  });
-  if (!res.ok) throw new Error("Error al editar receta");
-  return res.json();
+  return fetchJson(`${API_URL}/${receta.recetaId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(receta),
+    });
 }
 
  

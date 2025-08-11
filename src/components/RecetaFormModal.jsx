@@ -239,7 +239,7 @@ export default function RecetaFormModal({
           </div>
 
           {/* Descripción */}
-          <div>
+          {/* <div>
             <label className="block mb-2 font-semibold text-gray-700">
               Descripción
             </label>
@@ -250,12 +250,12 @@ export default function RecetaFormModal({
               placeholder="Descripción de la receta"
               rows={3}
             />
-          </div>
+          </div> */}
 
           {/* Instrucciones */}
           <div>
             <label className="block mb-2 font-semibold text-gray-700">
-              Instrucciones
+              Instrucciones / Observaciones
             </label>
             <textarea
               className="border border-gray-300 rounded-lg w-full py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -270,7 +270,7 @@ export default function RecetaFormModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block mb-2 font-semibold text-gray-700">
-                Número de porciones *
+                Número de raciones *
               </label>
               <input
                 type="number"

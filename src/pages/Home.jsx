@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookHeart, Calendar, Apple, Sparkles, HeartPlus, ChartLine, CalendarDays } from "lucide-react";
+import { BookHeart, Calendar, Apple, Sparkles, HeartPlus, ChartLine, CalendarDays, Wrench } from "lucide-react";
 import MenuPlanner from "./MenuPlanner";
 import RecipeManager from "./RecipeManager";
 import InsumosManager from "../pages/InsumosManager";
@@ -7,11 +7,20 @@ import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
 import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";
 import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 import Reports from "./Calendar";
+import { logout } from "../api/auth";
+import { useNavigate } from "react-router-dom";
+import ChangePassword from "./ChangePassword";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
   const [recetaDetalleId, setRecetaDetalleId] = useState(null); // Nuevo estado para el id de receta
   const LOGO_URL = "/logo-blima.jpg";
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col items-center justify-start p-0 md:p-6">
@@ -30,8 +39,9 @@ export default function Home() {
           <img
             src={LOGO_URL}
             alt="Logo Beneficencia"
-            className="h-20 sm:h-24 md:h-36 m-2 bg-white rounded-xl shadow-lg"
+            className="h-20 sm:h-24 md:h-36 m-2 bg-white rounded-xl shadow-lg cursor-pointer"
             style={{ objectFit: "contain", padding: 10, maxWidth: 120 }}
+            onClick={handleLogoClick}
           />
         </div>
       </div>
@@ -95,7 +105,7 @@ export default function Home() {
           >
             <Sparkles size={20} /> Nutrientes Receta
           </button> */}
-          <button
+          {/* <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
                 activeTab === "nutrientes2"
@@ -105,7 +115,7 @@ export default function Home() {
             onClick={() => setActiveTab("nutrientes2")}
           >
             <HeartPlus size={20} /> Mejoras
-          </button>
+          </button> */}
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
@@ -116,6 +126,17 @@ export default function Home() {
             onClick={() => setActiveTab("calendar")}
           >
             <CalendarDays size={20} /> Calendario
+          </button>
+          <button
+            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
+              ${
+                activeTab === "changepassword"
+                  ? "bg-purple-500 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            onClick={() => setActiveTab("changepassword")}
+          >
+            <Wrench size={20} /> Seguridad
           </button>
         </div>
         {/* Content */}
@@ -137,6 +158,7 @@ export default function Home() {
             )}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
           {activeTab === "calendar" && <Reports />}
+          {activeTab === "changepassword" && <ChangePassword />}
         </div>
       </div>
     </div>

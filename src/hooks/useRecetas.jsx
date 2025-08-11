@@ -136,13 +136,7 @@ export function useRecetas() {
   };
 
   // Obtener receta con insumos por ID
-  const getRecetaConInsumoById = async (id) => {
-    try {
-      return await getRecetaConInsumosById(id);
-    } catch (err) {
-      throw err;
-    }
-  };
+  const getRecetaConInsumoById = (id) => getRecetaConInsumosById(id);
 
   // Limpiar mensajes
   const clearMessages = () => {

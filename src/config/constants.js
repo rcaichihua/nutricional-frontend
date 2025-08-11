@@ -1,14 +1,14 @@
 // Variables globales de configuración
-export const API_URL_BASE = "http://192.168.1.6:8080/api";
-// export const API_URL_BASE = "http://localhost:8080/api";
+// export const API_URL_BASE = "http://192.168.1.6:8080/api";
+export const API_URL_BASE = "http://localhost:8080/api";
 export const APP_CONFIG = {
   // Configuración de la aplicación
   APP_NAME: 'Nutricional Frontend',
   APP_VERSION: '1.0.0',
   
   // Configuración de API
-  // API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.6:3000/api',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  // API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.6:3000/api',
   API_TIMEOUT: 10000,
   
   // Configuración de paginación
@@ -96,7 +96,7 @@ export const NUTRIENTS = {
   SODIO: 'sodio',
 };
 
-export const COLORSCHART = ["#9effac", "#17405c", "#d0fdff"]; // Carbohidratos, Proteínas, Lípidos
+export const COLORSCHART = ["#9effac", "#17405c", "#fff000"]; // Carbohidratos, Proteínas, Lípidos
 
 // Configuración de temas
 export const THEME = {

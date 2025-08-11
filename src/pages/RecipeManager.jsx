@@ -1,15 +1,14 @@
-import React, { useState } from "react";
-import { PlusCircle, Edit, Trash2, Eye, X } from "lucide-react";
+import { useState } from "react";
+import { PlusCircle, Edit, Trash2, Eye, X, Printer } from "lucide-react";
 import { useRecetas } from "../hooks/useRecetas";
 import RecetaFormModal from "../components/RecetaFormModal";
 import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
-import { TablaRecetasConInsumos } from "../components/TableRecetasConInsumos";
 
 export default function RecipeManager({ onVerDetalle }) {
   const {
     recetasConInsumos,
-    loadingRecetasConInsumos: loading,
-    errorRecetasConInsumos: error,
+    // loadingRecetasConInsumos: loading,
+    // errorRecetasConInsumos: error,
     refetchRecetasConInsumos: refetch,
     saveReceta,
     deleteReceta,
@@ -53,9 +52,24 @@ export default function RecipeManager({ onVerDetalle }) {
       try {
         await deleteReceta(id, refetch);
       } catch (error) {
-        alert("Error al eliminar la receta");
+        alert("Error al eliminar la receta", error);
       }
     }
+  };
+
+  // Estado para mostrar el menú desplegable de Printer
+  const [printerMenuOpen, setPrinterMenuOpen] = useState(null); // recetaId o null
+
+  // Handlers de impresión
+  const handlePrintReceta = (recetaId) => {
+    setPrinterMenuOpen(null);
+    // Acción para imprimir menú
+    alert(`Imprimir Menú de receta ${recetaId}`);
+  };
+  const handlePrintChart = (recetaId) => {
+    setPrinterMenuOpen(null);
+    // Acción para imprimir gráfico
+    alert(`Imprimir Gráfico de receta ${recetaId}`);
   };
 
   return (
@@ -77,7 +91,7 @@ export default function RecipeManager({ onVerDetalle }) {
         {recetasConInsumos.map((receta) => (
           <div
             key={receta.recetaId}
-            className="border border-gray-200 rounded-xl p-4 bg-white shadow flex flex-col justify-between"
+            className="border border-gray-200 rounded-xl p-4 bg-white shadow flex flex-col justify-between relative"
           >
             <div>
               <h3 className="font-bold text-lg text-gray-800">
@@ -102,12 +116,39 @@ export default function RecipeManager({ onVerDetalle }) {
               <button
                 className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
                 onClick={() => openModal(receta)}
+                title="Editar"
               >
                 <Edit size={18} />
               </button>
+              {/* <div className="relative">
+                <button
+                  className="p-2 text-yellow-500 hover:bg-blue-100 rounded-full"
+                  onClick={() => setPrinterMenuOpen(printerMenuOpen === receta.recetaId ? null : receta.recetaId)}
+                  title="Imprimir"
+                >
+                  <Printer size={18} />
+                </button>
+                {printerMenuOpen === receta.recetaId && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <button
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                      onClick={() => handlePrintReceta(receta.recetaId)}
+                    >
+                      Imprimir Menú
+                    </button>
+                    <button
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
+                      onClick={() => handlePrintChart(receta.recetaId)}
+                    >
+                      Imprimir Gráfico
+                    </button>
+                  </div>
+                )}
+              </div> */}
               <button
                 className="p-2 text-red-600 hover:bg-red-100 rounded-full"
                 onClick={() => handleDelete(receta.recetaId)}
+                title="Eliminar"
               >
                 <Trash2 size={18} />
               </button>

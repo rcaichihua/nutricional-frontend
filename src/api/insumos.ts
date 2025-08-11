@@ -17,15 +17,13 @@ export async function crearInsumo(insumo: Insumo): Promise<Insumo> {
 }
 
 export async function editarInsumo(insumo: Insumo): Promise<Insumo> {
-  const res = await fetch(`${API_URL}/${insumo.insumoId}`, {
+  return fetchJson(`${API_URL}/${insumo.insumoId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(insumo),
   });
-  if (!res.ok) throw new Error("Error al editar insumo");
-  return res.json();
 }
 
 export async function eliminarInsumo(insumo: Insumo): Promise<Insumo> {
