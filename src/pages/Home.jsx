@@ -10,10 +10,12 @@ import Reports from "./Calendar";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import ChangePassword from "./ChangePassword";
+import MenusManager from "./MenusManager";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
-  const [recetaDetalleId, setRecetaDetalleId] = useState(null); // Nuevo estado para el id de receta
+  const [recetaDetalleId, setRecetaDetalleId] = useState(null);
+  const [menuDetalleId, setMenuDetalleId] = useState(null);
   const LOGO_URL = "/logo-blima.jpg";
   const navigate = useNavigate();
 
@@ -64,8 +66,19 @@ export default function Home() {
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${
-                activeTab === "recipes"
+                activeTab === "menus"
                   ? "bg-purple-600 text-white shadow-lg"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            onClick={() => setActiveTab("menus")}
+          >
+            <BookHeart size={20} /> Gestor de Menús
+          </button>
+          <button
+            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
+              ${
+                activeTab === "recipes"
+                  ? "bg-cyan-500 text-white shadow-lg"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             onClick={() => setActiveTab("recipes")}
@@ -150,12 +163,27 @@ export default function Home() {
               }}
             />
           )}
-          {activeTab === "alimentos" && <InsumosManager />}
-          {activeTab === "nutrientes" && <MenuNutritionalDetail />}
           {activeTab === "nutrientesReceta" &&
             recetaDetalleId && (
               <RecetaNutritionalDetail id={recetaDetalleId} />
-            )}
+            )
+          }
+          {/* --- */}
+          {activeTab === "menus" && (
+            <MenusManager
+              onVerDetalle={(detalleMenuId) => {
+                setMenuDetalleId(detalleMenuId);
+                setActiveTab("nutrientesMenu");
+              }}
+            />
+          )}
+          {activeTab === "nutrientesMenu" &&
+            menuDetalleId && (
+              <MenuNutritionalDetail menuId={menuDetalleId} />
+            )
+          }
+          {activeTab === "alimentos" && <InsumosManager />}
+          {activeTab === "nutrientes" && <MenuNutritionalDetail />}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
           {activeTab === "calendar" && <Reports />}
           {activeTab === "changepassword" && <ChangePassword />}

@@ -80,7 +80,7 @@ export default function RecipeManager({ onVerDetalle }) {
           Recetas
         </h2>
         <button
-          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all"
+          className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all"
           onClick={() => openModal(null)}
         >
           <PlusCircle size={18} className="mr-2" /> Crear Nueva Receta

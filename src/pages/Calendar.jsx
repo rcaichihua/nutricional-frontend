@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar, FileText } from "lucide-react";
-import { getMenus, getMenusConInsumosByDay } from "../api/menus";
+import { getMenusConInsumos } from "../api/menus";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 export default function Reports() {
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [menus, setMenus] = useState([]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [cargando, setCargando] = useState(true);
   const [fechaParaImprimir, setFechaParaImprimir] = useState(null);
   const [imprimiendo, setImprimiendo] = useState(false);
@@ -17,18 +17,27 @@ export default function Reports() {
     setImprimiendo(true);
     try {
       const fechaStr = fechaParaImprimir.toISOString().split('T')[0];
-      const menuDiaArr = await getMenusConInsumosByDay(fechaStr);
-      const menuDia = Array.isArray(menuDiaArr) ? menuDiaArr[0] : menuDiaArr;
-      if (!menuDia || !menuDia.recetas || menuDia.recetas.length === 0) {
+      // Obtener todos los menús asignados a ese día
+      const menusAsignados = menus.filter(m => m.fechaAsignacion === fechaStr);
+      if (!menusAsignados || menusAsignados.length === 0) {
         alert('No hay menú registrado para este día.');
         setImprimiendo(false);
         return;
       }
-      // Agrupar recetas por tipoComida
+      // Agrupar recetas por tipoComida de todos los menús
       const categorias = ['Desayuno', 'Almuerzo', 'Cena'];
       const recetasPorCategoria = {};
       categorias.forEach(cat => {
-        recetasPorCategoria[cat] = menuDia.recetas.filter(r => r.tipoComida === cat);
+        recetasPorCategoria[cat] = [];
+      });
+      menusAsignados.forEach(asig => {
+        if (asig.menu && Array.isArray(asig.menu.recetas)) {
+          asig.menu.recetas.forEach(receta => {
+            if (categorias.includes(receta.tipoComida)) {
+              recetasPorCategoria[receta.tipoComida].push(receta);
+            }
+          });
+        }
       });
       // Crear PDF
       const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
@@ -80,7 +89,7 @@ export default function Reports() {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(13);
       pdf.setTextColor('#17405c');
-      pdf.text(menuDia.nombreMenu || `Menú del ${fechaStr}`, pageWidth / 2, y, { align: 'center' });
+      pdf.text(`Menús asignados del ${fechaStr}`, pageWidth / 2, y, { align: 'center' });
       y += 28;
       const marginX = 60; // margen adicional a la derecha
       categorias.forEach(cat => {
@@ -138,7 +147,7 @@ export default function Reports() {
     const cargarMenus = async () => {
       setCargando(true);
       try {
-        const menusObtenidos = await getMenus();
+        const menusObtenidos = await getMenusConInsumos();
         setMenus(menusObtenidos);
       } catch (error) {
         console.error('Error al cargar menús:', error);
@@ -174,10 +183,27 @@ export default function Reports() {
   };
 
   // Función para obtener recetas de un día específico
-  const obtenerRecetasDelDia = (fecha) => {
+  // Mapeo de menús asignados por día usando fechaAsignacion
+  const mapMenusByDay = (asignaciones) => {
+    const result = {};
+    asignaciones.forEach(asig => {
+      const fecha = asig.fechaAsignacion;
+      if (!result[fecha]) result[fecha] = [];
+      result[fecha].push({
+        tipoComida: asig.tipoComida,
+        menu: asig.menu
+      });
+    });
+    return result;
+  };
+
+  // Menús agrupados por día
+  const menusPorDia = mapMenusByDay(menus);
+
+  // Función para obtener menús asignados de un día específico
+  const obtenerMenusDelDia = (fecha) => {
     const fechaFormateada = fecha.toISOString().split('T')[0];
-    const menu = menus.find(m => m.fechaMenu === fechaFormateada);
-    return menu ? menu.recetas : [];
+    return menusPorDia[fechaFormateada] || [];
   };
 
   // Función para obtener nombre del mes
@@ -218,21 +244,23 @@ export default function Reports() {
   const exportarPDF = async () => {
     const input = document.getElementById("calendario-pdf");
     if (!input) return;
-    const canvas = await html2canvas(input, { scale: 2 });
+    // Usar html2canvas con mayor escala para mejor calidad
+    const canvas = await html2canvas(input, { scale: 3, useCORS: true });
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let y = 0;
-    if (imgHeight > pageHeight) {
-      y = 0;
-    } else {
-      y = (pageHeight - imgHeight) / 2;
+    // Calcular el tamaño óptimo para que el calendario se vea completo
+    let imgWidth = pageWidth - 40; // margen lateral
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
+    if (imgHeight > pageHeight - 40) {
+      imgHeight = pageHeight - 40;
+      imgWidth = (canvas.width * imgHeight) / canvas.height;
     }
-    pdf.addImage(imgData, "PNG", 0, y, imgWidth, imgHeight);
-    pdf.save("calendario-menus.pdf");
+    const x = (pageWidth - imgWidth) / 2;
+    const y = (pageHeight - imgHeight) / 2;
+    pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
+    pdf.save("calendario-menús.pdf");
   };
 
   const diasCalendario = generarDiasCalendario(fechaSeleccionada);
@@ -308,7 +336,7 @@ export default function Reports() {
             ))}
             {/* Días del mes */}
             {diasCalendario.map((fecha, index) => {
-              const recetas = obtenerRecetasDelDia(fecha);
+              const menusAsignados = obtenerMenusDelDia(fecha);
               const esSeleccionado = fechaParaImprimir && fechaParaImprimir.toDateString() === fecha.toDateString();
               return (
                 <div
@@ -325,21 +353,24 @@ export default function Reports() {
                   } ${esHoy(fecha) ? 'text-blue-600' : ''} ${esSeleccionado ? 'text-green-600' : ''}`}>
                     {fecha.getDate()}
                   </div>
-                  {/* Recetas */}
+                  {/* Menús asignados por tipo de comida */}
                   <div className="space-y-1">
-                    {recetas.length > 0 ? (
-                      recetas.map((receta, idx) => (
-                        <div
-                          key={idx}
-                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded text-center whitespace-normal break-words"
-                          title={receta.nombreReceta}
-                        >
-                          {receta.nombreReceta}
-                        </div>
-                      ))
+                    {menusAsignados.length > 0 ? (
+                      ["Desayuno", "Almuerzo", "Cena"].map(tipoComida => {
+                        const asigs = menusAsignados.filter(a => a.tipoComida === tipoComida);
+                        return asigs.length > 0 ? asigs.map((asig, idx) => (
+                          <div
+                            key={tipoComida + '-' + idx}
+                            className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded text-center whitespace-normal break-words"
+                            title={asig.menu.nombreMenu}
+                          >
+                            <span className="font-bold">{tipoComida}:</span> {asig.menu.nombreMenu}
+                          </div>
+                        )) : null;
+                      })
                     ) : (
                       <div className="text-xs text-gray-400 text-center py-2">
-                        Sin recetas
+                        Sin menús
                       </div>
                     )}
                   </div>

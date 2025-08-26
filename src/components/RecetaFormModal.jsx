@@ -435,7 +435,7 @@ export default function RecetaFormModal({
             </button>
             <button
               type="submit"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg flex items-center shadow-md transition-colors"
+              className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-6 rounded-lg flex items-center shadow-md transition-colors"
             >
               <Save size={18} className="mr-2" />
               {receta ? "Actualizar receta" : "Guardar receta"}

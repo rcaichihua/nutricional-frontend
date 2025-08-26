@@ -154,7 +154,7 @@ export default function RecipeEditorModal({ open, onClose, receta, insumos, onGu
           </button>
           <button
             type="submit"
-            className="w-1/2 py-3 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700 transition"
+            className="w-1/2 py-3 rounded-xl bg-cyan-500 text-white font-bold hover:bg-cyan-600 transition"
           >
             {receta ? "Guardar Cambios" : "Guardar Receta"}
           </button>

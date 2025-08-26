@@ -39,7 +39,7 @@ const Login = () => {
         <div
           className="hidden md:col-span-3 md:flex flex-col items-center justify-center relative h-full"
           style={{
-            backgroundImage: "url('/src/assets/login.jpg')",
+            backgroundImage: "url('/login.jpg')",
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

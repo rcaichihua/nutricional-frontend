@@ -3,6 +3,8 @@ import { User2, PlusCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRecetas } from "../hooks/useRecetas";
 import { getMenus, crearMenu, editarMenu } from "../api/menus";
 import SelectRecipeModal from "../components/SelectRecipeModal";
+import SelectMenuModal from "../components/SelectMenuModal";
+import { useAsignacionMenu } from "../hooks/useAsignacionMenu";
 
 // Mover constantes fuera del componente
 const DIAS_SEMANA = [
@@ -17,8 +19,25 @@ const COMIDAS = [
 ];
 
 export default function MenuPlanner() {
-  const { recetasConInsumos } = useRecetas();
-  
+  const { asignacionMenu, createAsignacionMenu } = useAsignacionMenu();
+  const { recetasConInsumos } = useRecetas({ onlyConInsumos: true });
+
+  // Nuevo estado: menús asignados por día y tipoComida
+  const [menusPorDiaComida, setMenusPorDiaComida] = useState({});
+
+  useEffect(() => {
+    // Agrupa las asignaciones por fechaAsignacion y tipoComida
+    const agrupados = {};
+    asignacionMenu.forEach((asig) => {
+      const fecha = asig.fechaAsignacion;
+      const tipo = asig.tipoComida;
+      if (!agrupados[fecha]) agrupados[fecha] = {};
+      if (!agrupados[fecha][tipo]) agrupados[fecha][tipo] = [];
+      agrupados[fecha][tipo].push(asig.menu);
+    });
+    setMenusPorDiaComida(agrupados);
+  }, [asignacionMenu]);
+
   // Estado para la semana seleccionada
   const [semanaSeleccionada, setSemanaSeleccionada] = useState(() => {
     const hoy = new Date();
@@ -43,23 +62,40 @@ export default function MenuPlanner() {
   // Estado para almacenar los menús obtenidos
   const [menus, setMenus] = useState([]);
   const [cargandoMenus, setCargandoMenus] = useState(true);
+  // Estado para mostrar el loader solo si la carga tarda más de 300ms
+  const [mostrarLoader, setMostrarLoader] = useState(false);
 
-  // Obtener todos los menús al montar el componente
-  useEffect(() => {
-    const obtenerMenus = async () => {
-      setCargandoMenus(true);
-      try {
-        const menusObtenidos = await getMenus();
-        setMenus(menusObtenidos);
-      } catch (error) {
-        console.log("Error al obtener menús:", error);
-      } finally {
-        setCargandoMenus(false);
+  // Centralizar el refetch de menús y asignaciones
+  const refetchMenusYAsignaciones = useCallback(async () => {
+    setCargandoMenus(true);
+    try {
+      const menusObtenidos = await getMenus();
+      setMenus(menusObtenidos);
+      if (typeof asignacionMenu.fetchAsignacionMenus === 'function') {
+        await asignacionMenu.fetchAsignacionMenus();
       }
-    };
+    } catch (error) {
+      console.log("Error al refrescar menús/asignaciones:", error);
+    } finally {
+      setCargandoMenus(false);
+    }
+  }, [asignacionMenu]);
 
-    obtenerMenus();
-  }, []);
+  // Efecto para mostrar el loader solo si la carga tarda más de 300ms
+  useEffect(() => {
+    let timer;
+    if (cargandoMenus) {
+      timer = setTimeout(() => setMostrarLoader(true), 300);
+    } else {
+      setMostrarLoader(false);
+    }
+    return () => clearTimeout(timer);
+  }, [cargandoMenus]);
+
+  // Refrescar al montar el componente
+  useEffect(() => {
+    refetchMenusYAsignaciones();
+  }, [refetchMenusYAsignaciones]);
 
   // Función para obtener las fechas de la semana
   const obtenerFechasSemana = (fechaInicio) => {
@@ -257,8 +293,8 @@ export default function MenuPlanner() {
   }, [fechasSemana, formatearFechaISO, menus, seleccionadas]);
 
   // Memoizar handlers para evitar re-renders innecesarios
-  const handleAbrirModal = useCallback((dia, comida) => {
-    setModalInfo({ dia, comida });
+  const handleAbrirModal = useCallback((dia, tipoComida) => {
+    setModalInfo({ dia, comida: tipoComida });
     setModalOpen(true);
   }, []);
 
@@ -314,9 +350,7 @@ export default function MenuPlanner() {
             <p className="text-sm text-gray-500">
               {formatearFecha(fechasSemana[0])} - {formatearFecha(fechasSemana[6])}
             </p>
-            {cargandoMenus && (
-              <p className="text-xs text-blue-600 mt-1">Cargando menús...</p>
-            )}
+            {/* Eliminado texto duplicado de carga, solo se muestra el loader superpuesto */}
           </div>
           
           <button
@@ -328,117 +362,95 @@ export default function MenuPlanner() {
         </div>
       </div>
 
-      {cargandoMenus ? (
-        <div className="text-center py-8">
-          <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Cargando menús...</p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-        {DIAS_SEMANA.map((dia, index) => (
-          <div
-            key={dia}
-            className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-4"
-          >
-            <div className="flex flex-wrap items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="text-xl font-extrabold">{dia}</span>
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
-                  {formatearFecha(fechasSemana[index])}
-                </span>
-                {tieneRecetas(dia) ? (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
-                    Con recetas
-                  </span>
-                ) : (
-                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg font-medium">
-                    Sin recetas
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <User2 className="text-gray-500" />
-                <span className="text-gray-600 font-medium">Comensales:</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={comensales[dia]}
-                  onChange={(e) =>
-                    setComensales((prev) => ({
-                      ...prev,
-                      [dia]: Number(e.target.value),
-                    }))
-                  }
-                  className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold"
-                />
-              </div>
-            </div>
-            {/* Comidas */}
-            <div className="flex flex-col md:flex-row gap-4">
-              {COMIDAS.map(({ tipo, color }) => (
-                <div key={tipo} className="flex-1 flex flex-col gap-2">
-                  <span className={`font-semibold ${color}`}>{tipo}</span>
-                  {/* Lista de recetasConInsumos para esta comida */}
-                  <div className="space-y-2">
-                    {(seleccionadas[dia]?.[tipo] || []).map((receta, idx) => (
-                      <div
-                        key={idx}
-                        className="w-full border-2 border-blue-200 rounded-xl py-3 px-4 flex items-center justify-between bg-blue-50"
-                      >
-                        <span className="font-bold text-blue-700">
-                          {receta.nombre}
+      {/* Renderiza el contenido principal siempre, y superpone el loader si mostrarLoader es true */}
+      <div className="relative">
+        {mostrarLoader && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-2 text-gray-600">Cargando menús...</p>
+          </div>
+        )}
+        <div className={mostrarLoader ? "pointer-events-none opacity-50" : ""}>
+          {/* ...contenido principal... */}
+          <div className="space-y-8">
+            {DIAS_SEMANA.map((dia, index) => {
+              const fechaISO = formatearFechaISO(fechasSemana[index]);
+              const asignadosPorComida = menusPorDiaComida[fechaISO] || {};
+              return (
+                <div
+                  key={dia}
+                  className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl font-extrabold">{dia}</span>
+                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                        {formatearFecha(fechasSemana[index])}
+                      </span>
+                      {Object.values(asignadosPorComida).flat().length > 0 ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
+                          Con menú asignado
                         </span>
+                      ) : (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg font-medium">
+                          Sin menú
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User2 className="text-gray-500" />
+                      <span className="text-gray-600 font-medium">Comensales:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={comensales[dia]}
+                        onChange={(e) =>
+                          setComensales((prev) => ({
+                            ...prev,
+                            [dia]: Number(e.target.value),
+                          }))
+                        }
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold"
+                      />
+                    </div>
+                  </div>
+                  {/* Menús asignados por tipo de comida */}
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {COMIDAS.map(({ tipo, color }) => (
+                      <div key={tipo} className="flex-1 flex flex-col gap-2">
+                        <span className={`font-semibold ${color}`}>{tipo}</span>
+                        <div className="space-y-2">
+                          {(asignadosPorComida[tipo] || []).map((menu, idx) => (
+                            <div
+                              key={menu.menuId + '-' + tipo + '-' + fechaISO}
+                              className="w-full border-2 border-blue-200 rounded-xl py-3 px-4 flex items-center justify-between bg-blue-50"
+                            >
+                              <span className="font-bold text-blue-700">
+                                {menu.nombreMenu}
+                              </span>
+                              {/* Aquí podrías agregar botón para quitar menú si lo necesitas */}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Botón para agregar menú a este tipo de comida */}
                         <button
-                          onClick={() => handleEliminarReceta(dia, tipo, idx)}
-                          className="text-red-400 hover:text-red-700 p-1"
+                          className="mt-2 w-full border-2 border-dashed border-gray-300 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 transition"
+                          onClick={() => handleAbrirModal(dia, tipo)}
                         >
-                          <X size={18} />
+                          <PlusCircle /> Asignar menu
                         </button>
                       </div>
                     ))}
                   </div>
-                  {/* Botón para agregar más recetasConInsumos */}
-                  <button
-                    className="mt-2 w-full border-2 border-dashed border-gray-300 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 transition"
-                    onClick={() => handleAbrirModal(dia, tipo)}
-                  >
-                    <PlusCircle /> Agregar receta
-                  </button>
+                  {/* Aquí podrías agregar botón de guardar asignación si lo necesitas */}
                 </div>
-              ))}
-            </div>
-            {/* Botón de guardar */}
-            <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => handleGuardarDia(dia)}
-                disabled={!tieneRecetas(dia) || guardando[dia]}
-                className={`px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
-                  tieneRecetas(dia)
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {guardando[dia] ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Guardar {dia}
-                  </>
-                )}
-              </button>
-            </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
       </div>
-      )}
       {/* Modal */}
-      <SelectRecipeModal
+      {/* <SelectRecipeModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         recetas={recetasConInsumos}
@@ -446,7 +458,40 @@ export default function MenuPlanner() {
         comida={modalInfo.comida}
         onSelect={handleSeleccionarReceta}
         seleccionadas={seleccionadas}
-      />
+      /> */}
+      {/* --- Modal simplificado --- */}
+      {modalOpen && (
+        <SelectMenuModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          fechaSeleccionada={(() => {
+            if (!modalOpen) return "";
+            const idx = DIAS_SEMANA.indexOf(modalInfo.dia);
+            return idx >= 0 ? formatearFechaISO(fechasSemana[idx]) : "";
+          })()}
+          menus={menus}
+          seleccionados={(() => {
+            if (!modalOpen) return [];
+            const idx = DIAS_SEMANA.indexOf(modalInfo.dia);
+            const fechaISO = idx >= 0 ? formatearFechaISO(fechasSemana[idx]) : "";
+            return menusPorDiaComida[fechaISO]?.[modalInfo.comida] || [];
+          })()}
+          onSave={async (seleccionados) => {
+            const idx = DIAS_SEMANA.indexOf(modalInfo.dia);
+            const fechaAsignacion = idx >= 0 ? formatearFechaISO(fechasSemana[idx]) : "";
+            const tipoComida = modalInfo.comida;
+            const menuIds = seleccionados.map(m => m.menuId);
+            const dto = { fechaAsignacion, tipoComida, menuIds };
+            const ok = await createAsignacionMenu(dto, () => {
+              alert("Asignación guardada exitosamente");
+            });
+            if (!ok) {
+              alert("Error al guardar la asignación");
+            }
+            // Si necesitas refrescar menús, puedes llamar refetchMenusYAsignaciones aquí
+          }}
+        />
+      )}
     </section>
   );
-}
+};
