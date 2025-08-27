@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 import { useMenus } from "../hooks/useMenus";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { Printer } from "lucide-react";
 
 // Colores para el gráfico y resumen
 const COLORS = ["#9effac", "#17405c", "#d0fdff"]; // Carbohidratos, Proteínas, Lípidos
@@ -42,11 +45,13 @@ const OTROS = [
 
 
 export default function MenuNutritionalDetail({ menuId }) {
+  const printRef = useRef();
   const { geValoresNutricionalesMenuById } = useMenus();
 
   const [menu, setMenu] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
 
   useEffect(() => {
     if (!menuId) return;
@@ -123,9 +128,38 @@ export default function MenuNutritionalDetail({ menuId }) {
     },
   ];
 
+  const handleDownloadPDF = async () => {
+  if (printRef.current) {
+    const canvas = await html2canvas(printRef.current, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let position = 0;
+    // Si la imagen es más alta que la página, agrega páginas
+    while (position < imgHeight) {
+      pdf.addImage(imgData, "PNG", 0, -position, imgWidth, imgHeight);
+      if (position + pageHeight < imgHeight) pdf.addPage();
+      position += pageHeight;
+    }
+    pdf.save(`${menu?.nombre || 'menu'}-nutricional.pdf`);
+  }
+};
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
+    <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8" ref={printRef}>
+      <div className="flex justify-end mb-4">
+        <button
+          className="p-2 text-yellow-500 hover:bg-blue-100 rounded-full print:hidden"
+          onClick={handleDownloadPDF}
+          title="Imprimir"
+        >
+          <Printer size={20} />
+        </button>
+      </div>
       {/* Encabezado menú */}
       <div className="mb-8 text-center">
         <b className="block text-xl">{menu.nombreMenu}</b>
