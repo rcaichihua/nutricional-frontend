@@ -50,9 +50,21 @@ export async function crearAsignacionMenu(menu: any): Promise<any> {
   });
 }
 
-export async function getAsignacionMenus(): Promise<Menu[]> {
+export async function getAsignacionMenus(): Promise<any[]> { // Se ajusta el tipo para incluir el ID
   return fetchJson(`${API_URL}/asignaciones`);
 }
+
+// --- NUEVA FUNCIÓN PARA ELIMINAR ASIGNACIÓN ---
+/**
+ * Elimina una asignación de menú específica por su ID.
+ * @param asignacionMenuId El ID de la asignación a eliminar.
+ */
+export async function eliminarAsignacionMenu(asignacionMenuId: number): Promise<void> {
+    return fetchJson(`${API_URL}/asignaciones/${asignacionMenuId}`, {
+      method: "DELETE",
+    });
+}
+// --- FIN DE LA NUEVA FUNCIÓN ---
 
 export async function getAsignacionMenusByDay(fecha: string): Promise<MenuRecetasInsumosDTO[]> {
   return fetchJson(`${API_URL}/fecha/${fecha}/asignacion`);
