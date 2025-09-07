@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { crearAsignacionMenu, getAsignacionMenus } from "../api/menus";
+import { crearAsignacionMenu, getAsignacionMenus, eliminarAsignacionMenu } from "../api/menus"; // Se importa la nueva función
 
 export function useAsignacionMenu() {
   const [asignacionMenu, setAsignacionMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Función para obtener las asignaciones de menus
   const fetchAsignacionMenus = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -16,7 +15,6 @@ export function useAsignacionMenu() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Crear Asignación de menus
   const createAsignacionMenu = async (asignacion, onSuccess) => {
     setLoading(true);
     setError(null);
@@ -33,16 +31,34 @@ export function useAsignacionMenu() {
     }
   };
 
-  // Cargar Asignaciones de menus al montar el componente
-    useEffect(() => {
-      fetchAsignacionMenus();
-    }, [fetchAsignacionMenus]);
+  // --- NUEVA FUNCIÓN PARA ELIMINAR ---
+  const deleteAsignacionMenu = async (asignacionMenuId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await eliminarAsignacionMenu(asignacionMenuId);
+      // Actualiza el estado local para reflejar el cambio instantáneamente (UI optimista)
+      setAsignacionMenu(prev => prev.filter(asig => asig.asignacionMenuId !== asignacionMenuId));
+      setLoading(false);
+      return true;
+    } catch (err) {
+      setError(err.message || "Error al eliminar la asignación de menú");
+      setLoading(false);
+      return false;
+    }
+  };
+  // --- FIN DE LA NUEVA FUNCIÓN ---
+
+  useEffect(() => {
+    fetchAsignacionMenus();
+  }, [fetchAsignacionMenus]);
 
   return {
-      asignacionMenu,
-      loading,
-      error,
-      fetchAsignacionMenus,
-      createAsignacionMenu
+    asignacionMenu,
+    loading,
+    error,
+    fetchAsignacionMenus,
+    createAsignacionMenu,
+    deleteAsignacionMenu, // Se exporta la nueva función
   };
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookHeart, Calendar, Apple, Sparkles, HeartPlus, ChartLine, CalendarDays, Wrench } from "lucide-react";
+import { BookHeart, Calendar, Apple, Sparkles, HeartPlus, ChartLine, CalendarDays, Wrench, LogOut } from "lucide-react"; // Se añade el ícono LogOut
 import MenuPlanner from "./MenuPlanner";
 import RecipeManager from "./RecipeManager";
 import InsumosManager from "../pages/InsumosManager";
@@ -19,7 +19,8 @@ export default function Home() {
   const LOGO_URL = "/logo-blima.jpg";
   const navigate = useNavigate();
 
-  const handleLogoClick = () => {
+  // Se renombra la función para que sea específica del logout y no del logo
+  const handleLogout = () => {
     logout();
     navigate('/login');
   };
@@ -27,23 +28,35 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col items-center justify-start p-0 md:p-6">
       {/* Banner institucional */}
-      <div className="w-full max-w-5xl rounded-2xl shadow-lg mb-6 overflow-hidden flex flex-col md:flex-row items-center bg-gradient-to-r from-blue-800 to-blue-500">
-        {/* Responsive: stack logo/heading en mobile */}
+      <div className="w-full max-w-5xl rounded-2xl shadow-lg mb-6 overflow-hidden flex flex-col md:flex-row items-center justify-between bg-gradient-to-r from-blue-800 to-blue-500">
+        {/* Lado izquierdo con el título */}
         <div className="flex-1 flex flex-col items-center md:items-start p-4 md:p-8">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-2 text-center md:text-left">
             Sociedad de Beneficencia de Lima
           </h1>
           <p className="text-base sm:text-lg text-blue-100 mb-2 font-semibold text-center md:text-left">
-          Programa Social de Apoyo Alimentario y Nutricional
+            Programa Social de Apoyo Alimentario y Nutricional
           </p>
         </div>
-        <div className="w-full md:w-auto flex justify-center md:justify-end">
+        
+        {/* --- CONTENEDOR DERECHO MODIFICADO --- */}
+        <div className="flex items-center gap-4 m-2 md:m-4">
+          {/* --- NUEVO BOTÓN DE LOGOUT --- */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold hover:bg-white/20 transition-colors"
+            title="Cerrar Sesión"
+          >
+            <LogOut size={20} />
+            <span className="hidden sm:inline">Cerrar Sesión</span>
+          </button>
+          
+          {/* Logo (se quita el onClick y cursor-pointer para evitar logout accidental) */}
           <img
             src={LOGO_URL}
             alt="Logo Beneficencia"
-            className="h-20 sm:h-24 md:h-36 m-2 bg-white rounded-xl shadow-lg cursor-pointer"
-            style={{ objectFit: "contain", padding: 10, maxWidth: 120 }}
-            onClick={handleLogoClick}
+            className="h-20 sm:h-24 md:h-32 bg-white rounded-xl shadow-lg p-2"
+            style={{ objectFit: 'contain' }}
           />
         </div>
       </div>
@@ -96,39 +109,6 @@ export default function Home() {
           >
             <Apple size={20} /> Alimentos
           </button>
-          {/* <button
-            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${
-                activeTab === "nutrientes"
-                  ? "bg-cyan-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            onClick={() => setActiveTab("nutrientes")}
-          >
-            <Sparkles size={20} /> Nutrientes
-          </button> */}
-          {/* <button
-            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${
-                activeTab === "nutrientesReceta"
-                  ? "bg-cyan-600 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            onClick={() => setActiveTab("nutrientesReceta")}
-          >
-            <Sparkles size={20} /> Nutrientes Receta
-          </button> */}
-          {/* <button
-            className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${
-                activeTab === "nutrientes2"
-                  ? "bg-cyan-500 text-white shadow-lg"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            onClick={() => setActiveTab("nutrientes2")}
-          >
-            <HeartPlus size={20} /> Mejoras
-          </button> */}
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
               ${

@@ -4,10 +4,13 @@ export default function SelectMenuModal({ open, onClose, fechaSeleccionada = "",
     const menus = menusProp;
     const [seleccionados, setSeleccionados] = useState([]);
 
-    // Mejor práctica: sincronizar el estado interno con las props relevantes
+    // --- CORRECCIÓN CLAVE AQUÍ ---
     useEffect(() => {
         if (open) {
-            setSeleccionados(seleccionadosProp);
+            // ANTES: Guardaba el objeto de asignación completo.
+            // AHORA: Extraemos solo el objeto 'menu' de cada asignación para que el resto del modal funcione como antes.
+            const menusYaSeleccionados = seleccionadosProp.map(asig => asig.menu);
+            setSeleccionados(menusYaSeleccionados);
         }
     }, [open, seleccionadosProp]);
 
