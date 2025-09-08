@@ -1,23 +1,29 @@
 // Variables globales de configuración
-export const API_URL_BASE = "http://192.168.1.6:8080/api";
-// export const API_URL_BASE = "http://localhost:8080/api";
+
+// Opción 1: Para desarrollo local (si accedes desde la misma PC donde corre el backend)
+export const API_URL_BASE = "http://localhost:8088/api";
+
+// Opción 2: Para acceder desde otros dispositivos en la misma red (ej. un celular)
+// export const API_URL_BASE = "http://192.168.1.6:8088/api";
+
+
+// El resto de tu archivo de constantes se mantiene igual...
 export const APP_CONFIG = {
   // Configuración de la aplicación
   APP_NAME: 'Nutricional Frontend',
   APP_VERSION: '1.0.0',
-  
+
   // Configuración de API
-  // API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.6:3000/api',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api', // También corregido aquí
   API_TIMEOUT: 10000,
-  
+
   // Configuración de paginación
   DEFAULT_PAGE_SIZE: 10,
   MAX_PAGE_SIZE: 100,
-  
+
   // Configuración de notificaciones
   TOAST_DURATION: 3000,
-  
+
   // Configuración de validación
   MIN_PASSWORD_LENGTH: 8,
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
@@ -141,4 +147,4 @@ export const VALIDATION = {
   MAX_LENGTH: (max) => `Máximo ${max} caracteres`,
   NUMERIC: 'Solo se permiten números',
   POSITIVE: 'El valor debe ser positivo',
-}; 
+};

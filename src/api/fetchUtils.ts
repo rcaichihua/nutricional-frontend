@@ -1,33 +1,50 @@
-import { getAuthToken, logout } from "../api/auth";
+// Se importa la constante directamente aquí para centralizar la configuración
+import { API_URL_BASE } from "../config/constants";
 
-export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  // Obtiene el token de autenticación
+// --- LÓGICA DE TOKEN ---
+function getAuthToken(): string | null {
+  return localStorage.getItem('authToken');
+}
+
+function logout() {
+  localStorage.removeItem('authToken');
+  window.location.replace('/login');
+}
+// --- FIN LÓGICA DE TOKEN ---
+
+
+export async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = getAuthToken();
 
-  // Prepara los encabezados de la solicitud
   const headers = {
+    'Content-Type': 'application/json',
     ...options?.headers,
   };
 
-  // Si existe un token, lo adjunta al encabezado Authorization
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
   try {
-    const res = await fetch(url, {
+    // Se construye la URL completa aquí, asegurando que API_URL_BASE siempre esté disponible
+    const fullUrl = `${API_URL_BASE}${endpoint}`;
+
+    const res = await fetch(fullUrl, {
       ...options,
-      headers: headers, // Usa los headers actualizados
+      headers: headers,
     });
 
     if (!res.ok) {
-      // Si la respuesta es 401, el token es inválido o no existe.
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403) {
         console.error("Autenticación fallida. Redirigiendo al login...");
         logout();
       }
       const errorText = await res.text();
-      throw new Error(errorText || `Error ${res.status}`);
+      throw new Error(errorText || `Error del servidor: ${res.status}`);
+    }
+
+    if (res.status === 204) {
+      return null as any;
     }
 
     const contentType = res.headers.get("content-type");
@@ -37,6 +54,7 @@ export async function fetchJson<T>(url: string, options?: RequestInit): Promise<
 
     return null as any;
   } catch (error) {
+    console.error("Error en la llamada fetch:", error);
     throw error;
   }
 }
