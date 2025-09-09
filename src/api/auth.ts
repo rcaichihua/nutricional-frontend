@@ -9,12 +9,25 @@ export async function login(username, password) {
     body: JSON.stringify({ username, password }),
   });
 
-  if (!response.ok) {
-    throw new Error("Credenciales inválidas");
+  // 1. Se lee la respuesta como JSON en lugar de texto
+  const responseData = await response.json();
+
+  // 2. Se verifica la propiedad 'success' del JSON que envía el backend
+  if (!response.ok || !responseData.success) {
+    // Si hay un error, se usa el mensaje del backend para más claridad
+    throw new Error(responseData.message || "Credenciales inválidas");
   }
 
-  const token = await response.text();
-  localStorage.setItem("authToken", token);
+  // 3. Se extrae el token de la ruta correcta (data.token)
+  const token = responseData.data.token;
+
+  if (token) {
+    // 4. Se guarda únicamente el token en localStorage
+    localStorage.setItem("authToken", token);
+  } else {
+    // Se añade una validación por si el token no viene en la respuesta
+    throw new Error("No se recibió un token en la respuesta del servidor.");
+  }
 }
 
 export async function changePassword(oldPassword, newPassword) {
