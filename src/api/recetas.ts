@@ -4,14 +4,24 @@ import { fetchJson } from "./fetchUtils";
 // Se define solo el endpoint específico, no la URL completa.
 const API_ENDPOINT = "/recetas";
 
+// --- NUEVO: Se define un tipo genérico para la respuesta paginada del backend ---
+export interface Page<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number; // Página actual (0-indexed)
+}
+
+// La función ahora es obsoleta, se usará la paginada en su lugar
 export async function getRecetas(): Promise<Receta[]> {
-  // Se pasa solo el endpoint a fetchJson.
   return fetchJson(API_ENDPOINT);
 }
 
-export async function getRecetasConInsumos(): Promise<RecetaConInsumosDTO[]> {
-  // Se pasa solo el endpoint a fetchJson.
-  return fetchJson(API_ENDPOINT);
+// --- MODIFICADO: La función ahora acepta parámetros de paginación ---
+export async function getRecetasConInsumos(page: number, size: number): Promise<Page<RecetaConInsumosDTO>> {
+  // Se añaden los parámetros de página y tamaño a la URL
+  return fetchJson(`${API_ENDPOINT}?page=${page}&size=${size}`);
 }
 
 export async function getRecetaConInsumosById(id: string): Promise<RecetaConInsumosDTO> {

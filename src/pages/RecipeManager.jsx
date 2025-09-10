@@ -1,24 +1,28 @@
 import { useState } from "react";
-import { PlusCircle, Edit, Trash2, Eye, X, Printer } from "lucide-react";
-import { useRecetas } from "../hooks/useRecetas";
-import RecetaFormModal from "../components/RecetaFormModal";
-import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
+import { PlusCircle, Edit, Trash2, Eye, X, ChevronLeft, ChevronRight } from "lucide-react";
+// --- CORRECCIÓN: Se añaden las extensiones .jsx a las importaciones para asegurar la resolución de rutas ---
+import { useRecetas } from "../hooks/useRecetas.jsx";
+import RecetaFormModal from "../components/RecetaFormModal.jsx";
+import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail.jsx";
 
 export default function RecipeManager({ onVerDetalle }) {
   const {
     recetasConInsumos,
-    // loadingRecetasConInsumos: loading,
-    // errorRecetasConInsumos: error,
+    loadingRecetasConInsumos: loading,
     refetchRecetasConInsumos: refetch,
     saveReceta,
     deleteReceta,
-  } = useRecetas();
+    // Se obtienen los estados y funciones de paginación del hook
+    page,
+    totalPages,
+    goToNextPage,
+    goToPreviousPage,
+  } = useRecetas({ onlyConInsumos: true });
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedReceta, setSelectedReceta] = useState(null);
   const [detalleRecetaId, setDetalleRecetaId] = useState(null);
 
-  // Modal para crear/editar receta
   const openModal = (receta = null) => {
     setSelectedReceta(receta);
     setModalOpen(true);
@@ -29,12 +33,10 @@ export default function RecipeManager({ onVerDetalle }) {
     setSelectedReceta(null);
   };
 
-  // Guardar receta
   const handleSaveReceta = async (recetaData) => {
     try {
       const ok = await saveReceta(recetaData, closeModal);
       if (ok) {
-        refetch(); // Recargar la lista de recetas con insumos
         alert(
           selectedReceta
             ? "Receta actualizada exitosamente"
@@ -57,21 +59,6 @@ export default function RecipeManager({ onVerDetalle }) {
     }
   };
 
-  // Estado para mostrar el menú desplegable de Printer
-  const [printerMenuOpen, setPrinterMenuOpen] = useState(null); // recetaId o null
-
-  // Handlers de impresión
-  const handlePrintReceta = (recetaId) => {
-    setPrinterMenuOpen(null);
-    // Acción para imprimir menú
-    alert(`Imprimir Menú de receta ${recetaId}`);
-  };
-  const handlePrintChart = (recetaId) => {
-    setPrinterMenuOpen(null);
-    // Acción para imprimir gráfico
-    alert(`Imprimir Gráfico de receta ${recetaId}`);
-  };
-
   return (
     <div>
       <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
@@ -86,77 +73,84 @@ export default function RecipeManager({ onVerDetalle }) {
           <PlusCircle size={18} className="mr-2" /> Crear Nueva Receta
         </button>
       </div>
-      {/* Lista de recetas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {recetasConInsumos.map((receta) => (
-          <div
-            key={receta.recetaId}
-            className="border border-gray-200 rounded-xl p-4 bg-white shadow flex flex-col justify-between relative"
-          >
-            <div>
-              <h3 className="font-bold text-lg text-gray-800">
-                {receta.nombre}
-              </h3>
-              <ul className="list-disc list-inside text-sm text-gray-600 my-2 pl-2">
-                {receta.insumos.map((insumo, i) => (
-                  <li key={i}>
-                    {insumo.nombreInsumo} ({insumo.cantidadEnReceta ?? insumo.cantidad} {insumo.unidadMedida ?? insumo.unidad})
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex items-center justify-end space-x-2 mt-2">
-              <button
-                className="p-2 text-green-600 hover:bg-green-100 rounded-full"
-                onClick={() => onVerDetalle ? onVerDetalle(receta.recetaId) : setDetalleRecetaId(receta.recetaId)}
-                title="Ver detalle"
+
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+            <p className="text-gray-500">Cargando recetas...</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
+            {recetasConInsumos.map((receta) => (
+              <div
+                key={receta.recetaId}
+                className="border border-gray-200 rounded-xl p-4 bg-white shadow flex flex-col justify-between relative"
               >
-                <Eye size={18} />
-              </button>
-              <button
-                className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
-                onClick={() => openModal(receta)}
-                title="Editar"
-              >
-                <Edit size={18} />
-              </button>
-              {/* <div className="relative">
-                <button
-                  className="p-2 text-yellow-500 hover:bg-blue-100 rounded-full"
-                  onClick={() => setPrinterMenuOpen(printerMenuOpen === receta.recetaId ? null : receta.recetaId)}
-                  title="Imprimir"
-                >
-                  <Printer size={18} />
-                </button>
-                {printerMenuOpen === receta.recetaId && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                    <button
-                      className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
-                      onClick={() => handlePrintReceta(receta.recetaId)}
-                    >
-                      Imprimir Menú
-                    </button>
-                    <button
-                      className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-700"
-                      onClick={() => handlePrintChart(receta.recetaId)}
-                    >
-                      Imprimir Gráfico
-                    </button>
-                  </div>
-                )}
-              </div> */}
-              <button
-                className="p-2 text-red-600 hover:bg-red-100 rounded-full"
-                onClick={() => handleDelete(receta.recetaId)}
-                title="Eliminar"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-800">
+                    {receta.nombre}
+                  </h3>
+                  <ul className="list-disc list-inside text-sm text-gray-600 my-2 pl-2">
+                    {receta.insumos.map((insumo, i) => (
+                      <li key={i}>
+                        {insumo.nombreInsumo} ({insumo.cantidadEnReceta ?? insumo.cantidad} {insumo.unidadMedida ?? insumo.unidad})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex items-center justify-end space-x-2 mt-2">
+                  <button
+                    className="p-2 text-green-600 hover:bg-green-100 rounded-full"
+                    onClick={() => onVerDetalle ? onVerDetalle(receta.recetaId) : setDetalleRecetaId(receta.recetaId)}
+                    title="Ver detalle"
+                  >
+                    <Eye size={18} />
+                  </button>
+                  <button
+                    className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
+                    onClick={() => openModal(receta)}
+                    title="Editar"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
+                    className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+                    onClick={() => handleDelete(receta.recetaId)}
+                    title="Eliminar"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {/* MODAL DE FORMULARIO */}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center mt-8 gap-4">
+              <button
+                onClick={goToPreviousPage}
+                disabled={page <= 1}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
+              >
+                <ChevronLeft size={16} />
+                Anterior
+              </button>
+              <span className="font-semibold text-gray-700">
+                Página {page} de {totalPages}
+              </span>
+              <button
+                onClick={goToNextPage}
+                disabled={page >= totalPages}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+              >
+                Siguiente
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
       {modalOpen && (
         <RecetaFormModal
           receta={selectedReceta}
@@ -165,7 +159,6 @@ export default function RecipeManager({ onVerDetalle }) {
           isOpen={modalOpen}
         />
       )}
-      {/* MODAL DE DETALLE */}
       {detalleRecetaId && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
           <div className="bg-white rounded-xl shadow-lg p-6 max-w-2xl w-full relative">
@@ -179,7 +172,6 @@ export default function RecipeManager({ onVerDetalle }) {
           </div>
         </div>
       )}
-      {/* <TablaRecetasConInsumos /> */}
     </div>
   );
 }

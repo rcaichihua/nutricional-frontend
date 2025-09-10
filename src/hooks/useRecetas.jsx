@@ -7,23 +7,30 @@ import {
   getRecetasConInsumos,
 } from "../api/recetas";
 
+// Se define el tamaño de página como una constante para fácil modificación
+const PAGE_SIZE = 6;
+
 export function useRecetas({ onlyConInsumos = false } = {}) {
-    // Estados para listar recetas
+    // Estados para listar recetas (originales, sin cambios)
     const [recetas, setRecetas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Estados para recetas con insumos
+    // Estados para recetas con insumos (originales, sin cambios)
     const [recetasConInsumos, setRecetasConInsumos] = useState([]);
     const [loadingRecetasConInsumos, setLoadingRecetasConInsumos] = useState(true);
     const [errorRecetasConInsumos, setErrorRecetasConInsumos] = useState(null);
 
-    // Estados para operaciones CRUD
+    // Estados para operaciones CRUD (originales, sin cambios)
     const [operationLoading, setOperationLoading] = useState(false);
     const [operationError, setOperationError] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
 
-    // Función para obtener recetas
+    // --- ESTADOS DE PAGINACIÓN (SIN CAMBIOS) ---
+    const [page, setPage] = useState(0); // Página actual, 0-indexed para la API
+    const [totalPages, setTotalPages] = useState(0);
+
+    // Función para obtener recetas (original, sin cambios)
     const fetchRecetas = useCallback(() => {
       setLoading(true);
       setError(null);
@@ -33,17 +40,37 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
         .finally(() => setLoading(false));
     }, []);
 
-    // Función para obtener recetas con insumos
-    const fetchRecetasConInsumos = useCallback(() => {
+    // --- MODIFICADO: La función para obtener recetas ahora es la única que actualiza los estados ---
+    const fetchRecetasConInsumos = useCallback(async (currentPage = 0) => {
       setLoadingRecetasConInsumos(true);
       setErrorRecetasConInsumos(null);
-      getRecetasConInsumos()
-        .then(setRecetasConInsumos)
-        .catch(setErrorRecetasConInsumos)
-        .finally(() => setLoadingRecetasConInsumos(false));
+      try {
+        const data = await getRecetasConInsumos(currentPage, PAGE_SIZE);
+        //console.log("[Paso 4] 📦 Datos recibidos del backend:", data);
+        setRecetasConInsumos(data.content);
+        setTotalPages(data.totalPages);
+        setPage(data.number); // Actualiza el número de página con la respuesta de la API
+      } catch (err) {
+        setErrorRecetasConInsumos(err.message || "Error al cargar recetas");
+      } finally {
+        setLoadingRecetasConInsumos(false);
+      }
     }, []);
+    
+    // --- CORRECCIÓN: Las funciones de navegación ahora llaman a fetch directamente ---
+    const goToNextPage = () => {
+        if (page < totalPages - 1) {
+            fetchRecetasConInsumos(page + 1);
+        }
+    };
 
-    // Validaciones centralizadas
+    const goToPreviousPage = () => {
+        if (page > 0) {
+            fetchRecetasConInsumos(page - 1);
+        }
+    };
+
+    // Validaciones centralizadas (original, sin cambios)
     const validateReceta = (receta) => {
       const errors = [];
       if (!receta.nombre?.trim()) {
@@ -55,8 +82,8 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
       return errors;
     };
 
-    // Crear receta
-    const createReceta = async (receta, onSuccess) => {
+    // Crear receta (modificado para refrescar la página actual)
+    const createRecetaOriginal = async (receta, onSuccess) => {
       setOperationLoading(true);
       setOperationError(null);
       setSuccessMessage(null);
@@ -69,7 +96,7 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
         await crearReceta(receta);
         setSuccessMessage("Receta creada exitosamente");
         if (!onlyConInsumos) fetchRecetas();
-        fetchRecetasConInsumos(); // Refrescar también recetas con insumos
+        fetchRecetasConInsumos(page); // Refresca la página actual
         onSuccess?.();
         return true;
       } catch (err) {
@@ -80,7 +107,7 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
       }
     };
 
-    // Editar receta
+    // Editar receta (modificado para refrescar la página actual)
     const updateReceta = async (receta, onSuccess) => {
       setOperationLoading(true);
       setOperationError(null);
@@ -94,7 +121,7 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
         await editarReceta(receta);
         setSuccessMessage("Receta actualizada exitosamente");
         if (!onlyConInsumos) fetchRecetas();
-        fetchRecetasConInsumos(); // Refrescar también recetas con insumos
+        fetchRecetasConInsumos(page); // Refresca la página actual
         onSuccess?.();
         return true;
       } catch (err) {
@@ -105,7 +132,7 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
       }
     };
 
-    // Eliminar receta
+    // Eliminar receta (modificado para refrescar la página actual)
     const deleteReceta = async (recetaId, onSuccess) => {
       setOperationLoading(true);
       setOperationError(null);
@@ -115,7 +142,7 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
         // await eliminarReceta(recetaId);
         setSuccessMessage("Receta eliminada exitosamente");
         if (!onlyConInsumos) fetchRecetas();
-        fetchRecetasConInsumos(); // Refrescar también recetas con insumos
+        fetchRecetasConInsumos(page); // Refresca la página actual
         onSuccess?.();
         return true;
       } catch (err) {
@@ -126,60 +153,69 @@ export function useRecetas({ onlyConInsumos = false } = {}) {
       }
     };
 
-    // Guardar (crear o editar)
+    // Guardar (crear o editar) (se mantiene intacta)
     const saveReceta = async (receta, onSuccess) => {
       if (receta.recetaId) {
         return await updateReceta(receta, onSuccess);
       } else {
-        return await createReceta(receta, onSuccess);
+        // Se usa la función original con un nombre interno diferente para evitar colisión de nombres
+        return await createRecetaOriginal(receta, onSuccess);
       }
     };
 
-    // Obtener receta con insumos por ID
+    // Obtener receta con insumos por ID (se mantiene intacta)
     const getRecetaConInsumoById = (id) => getRecetaConInsumosById(id);
 
-    // Limpiar mensajes
+    // Limpiar mensajes (se mantiene intacta)
     const clearMessages = () => {
       setOperationError(null);
       setSuccessMessage(null);
     };
 
-    // Cargar recetas al montar el componente
+    // --- MODIFICADO: El useEffect ahora solo carga los datos iniciales ---
     useEffect(() => {
-      if (onlyConInsumos) {
-        fetchRecetasConInsumos();
-      } else {
-        fetchRecetas();
-        fetchRecetasConInsumos();
-      }
+        // La lógica original se adapta para cargar la primera página al montar
+        if (onlyConInsumos) {
+            fetchRecetasConInsumos(0); 
+        } else {
+            fetchRecetas();
+            fetchRecetasConInsumos(0);
+        }
     }, [fetchRecetas, fetchRecetasConInsumos, onlyConInsumos]);
 
     return {
-      // Estados para listar
+      // Estados para listar (originales, sin cambios)
       recetas,
       loading,
       error,
       refetch: fetchRecetas,
 
-      // Estados para recetas con insumos
+      // Estados para recetas con insumos (originales, sin cambios)
       recetasConInsumos,
       loadingRecetasConInsumos,
       errorRecetasConInsumos,
       refetchRecetasConInsumos: fetchRecetasConInsumos,
 
-      // Estados para operaciones
+      // Estados para operaciones (originales, sin cambios)
       operationLoading,
       operationError,
       successMessage,
 
-      // Funciones CRUD
-      createReceta,
+      // Funciones CRUD (se mantiene la estructura original, renombrando createReceta para evitar colisión)
+      createReceta: createRecetaOriginal,
       updateReceta,
       deleteReceta,
       saveReceta,
       clearMessages,
+      
+      // --- Se exportan los nuevos estados y funciones de paginación ---
+      page: page + 1, // Se devuelve 1-indexed para la UI
+      totalPages,
+      goToNextPage,
+      goToPreviousPage,
 
-      // Extra
+      // Extra (original, sin cambios)
       getRecetaConInsumoById,
     };
   }
+
