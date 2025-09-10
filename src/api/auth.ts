@@ -9,27 +9,24 @@ export async function login(username, password) {
     body: JSON.stringify({ username, password }),
   });
 
-  // 1. Se lee la respuesta como JSON en lugar de texto
   const responseData = await response.json();
 
-  // 2. Se verifica la propiedad 'success' del JSON que envía el backend
   if (!response.ok || !responseData.success) {
-    // Si hay un error, se usa el mensaje del backend para más claridad
     throw new Error(responseData.message || "Credenciales inválidas");
   }
 
-  // 3. Se extrae el token de la ruta correcta (data.token)
-  const token = responseData.data.token;
+  const { token, username: loggedInUsername } = responseData.data;
 
-  if (token) {
-    // 4. Se guarda únicamente el token en localStorage
+  if (token && loggedInUsername) {
+    // --- NUEVO: Se guardan tanto el token como el nombre de usuario ---
     localStorage.setItem("authToken", token);
+    localStorage.setItem("username", loggedInUsername);
   } else {
-    // Se añade una validación por si el token no viene en la respuesta
-    throw new Error("No se recibió un token en la respuesta del servidor.");
+    throw new Error("No se recibió un token o nombre de usuario en la respuesta del servidor.");
   }
 }
 
+// ... (tu función changePassword se mantiene igual) ...
 export async function changePassword(oldPassword, newPassword) {
   const token = localStorage.getItem("authToken");
   if (!token) {
@@ -51,11 +48,19 @@ export async function changePassword(oldPassword, newPassword) {
   }
 }
 
+
 export function logout() {
+  // --- NUEVO: Se elimina también el nombre de usuario al cerrar sesión ---
   localStorage.removeItem("authToken");
+  localStorage.removeItem("username");
   window.location.reload();
 }
 
 export function getAuthToken() {
   return localStorage.getItem("authToken");
+}
+
+// --- NUEVO: Función para obtener el nombre de usuario guardado ---
+export function getUsername() {
+  return localStorage.getItem("username");
 }

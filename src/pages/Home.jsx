@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { BookHeart, Calendar, Apple, Sparkles, HeartPlus, ChartLine, CalendarDays, Wrench, LogOut, UserCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { BookHeart, Calendar, Apple, Sparkles, ChartLine, CalendarDays, Wrench, LogOut, UserCircle } from "lucide-react";
 import MenuPlanner from "./MenuPlanner";
 import RecipeManager from "./RecipeManager";
-import InsumosManager from "../pages/InsumosManager";
+import InsumosManager from "./InsumosManager";
 import MenuNutritionalDetail from "../components/MenuNutritionalDetail";
-import ComparativoNutricionalLocro from "../pages/ComparativoNutricionalLocro";
+import ComparativoNutricionalLocro from "./ComparativoNutricionalLocro";
 import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 import Reports from "./Calendar";
-import { logout } from "../api/auth";
+import { logout, getUsername } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import ChangePassword from "./ChangePassword";
 import MenusManager from "./MenusManager";
@@ -22,7 +22,14 @@ export default function Home() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const username = "Usuario";
+  const [username, setUsername] = useState("Usuario");
+
+  useEffect(() => {
+    const storedUsername = getUsername();
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -42,8 +49,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col items-center justify-start p-0 md:p-6">
-      {/* --- CABECERA MODIFICADA --- */}
-      {/* Se elimina la clase 'overflow-hidden' para permitir que el dropdown sea visible */}
+      {/* --- CORRECCIÓN: Se elimina 'overflow-hidden' para que el dropdown sea visible --- */}
       <div className="w-full max-w-7xl rounded-2xl shadow-lg mb-6 flex items-center justify-between bg-gradient-to-r from-blue-800 to-blue-500 p-4">
         {/* Lado izquierdo: Logo y Título */}
         <div className="flex items-center gap-4">
@@ -88,7 +94,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* El resto de tu componente (Tabs y contenido dinámico) se mantiene exactamente igual */}
       <div className="w-full max-w-7xl bg-white rounded-2xl shadow-2xl flex flex-col items-center">
         <div className="w-full flex flex-wrap justify-center gap-2 md:gap-6 mb-0 mt-4 px-4">
           <button
@@ -190,3 +195,4 @@ export default function Home() {
     </div>
   );
 }
+
