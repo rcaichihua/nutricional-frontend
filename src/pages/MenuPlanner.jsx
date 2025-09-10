@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-// 1. Se añaden los nuevos íconos y funciones
-import { User2, PlusCircle, Trash2, ChevronLeft, ChevronRight, CalendarClock } from "lucide-react"; 
-import { format, getWeek, isSameWeek } from 'date-fns'; 
+import { User2, PlusCircle, Trash2, ChevronLeft, ChevronRight, CalendarClock } from "lucide-react";
+import { format, getWeek, isSameWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRecetas } from "../hooks/useRecetas";
 import { getMenus, crearMenu, editarMenu } from "../api/menus";
@@ -11,7 +10,7 @@ import { useAsignacionMenu } from "../hooks/useAsignacionMenu";
 
 // Mover constantes fuera del componente
 const DIAS_SEMANA = [
-  "Lunes", "Martes", "Miércoles", "Jueves", 
+  "Lunes", "Martes", "Miércoles", "Jueves",
   "Viernes", "Sábado", "Domingo"
 ];
 
@@ -22,7 +21,8 @@ const COMIDAS = [
 ];
 
 export default function MenuPlanner() {
-  const { asignacionMenu, createAsignacionMenu, deleteAsignacionMenu } = useAsignacionMenu();
+  // Se destructura fetchAsignacionMenus para usarlo en el useEffect
+  const { asignacionMenu, createAsignacionMenu, deleteAsignacionMenu, fetchAsignacionMenus } = useAsignacionMenu();
   const { recetasConInsumos } = useRecetas({ onlyConInsumos: true });
 
   const [menusPorDiaComida, setMenusPorDiaComida] = useState({});
@@ -42,7 +42,7 @@ export default function MenuPlanner() {
   const handleEliminarAsignacion = useCallback(async (asignacionMenuId) => {
     if (window.confirm("¿Estás seguro de que deseas eliminar este menú asignado?")) {
       const success = await deleteAsignacionMenu(asignacionMenuId);
-      
+
       if (!success) {
         alert("Hubo un error al eliminar la asignación.");
       }
@@ -58,9 +58,7 @@ export default function MenuPlanner() {
     return lunes;
   });
 
-  // --- 2. NUEVA FUNCIÓN PARA VOLVER A LA SEMANA ACTUAL ---
   const handleGoToCurrentWeek = () => {
-    // Simplemente resetea el estado al cálculo inicial
     const hoy = new Date();
     const lunes = new Date(hoy);
     const diaSemana = hoy.getDay();
@@ -68,36 +66,37 @@ export default function MenuPlanner() {
     lunes.setDate(hoy.getDate() - diasHastaLunes);
     setSemanaSeleccionada(lunes);
   };
-  
-  // El resto de tu código original se mantiene intacto...
+
   const [comensales, setComensales] = useState(
     DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 700 }), {})
   );
 
-  const [seleccionadas, setSeleccionadas] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInfo, setModalInfo] = useState({ dia: "", comida: "" });
-
-  const [guardando, setGuardando] = useState({});
 
   const [menus, setMenus] = useState([]);
   const [cargandoMenus, setCargandoMenus] = useState(true);
   const [mostrarLoader, setMostrarLoader] = useState(false);
 
-  const refetchMenusYAsignaciones = useCallback(async () => {
-    setCargandoMenus(true);
-    try {
-      const menusObtenidos = await getMenus();
-      setMenus(menusObtenidos);
-      if (typeof asignacionMenu.fetchAsignacionMenus === 'function') {
-        await asignacionMenu.fetchAsignacionMenus();
+  // --- CORRECCIÓN: Se simplifica la carga de datos a un solo useEffect para evitar el bucle infinito ---
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setCargandoMenus(true);
+      try {
+        // Se ejecutan ambas cargas de datos en paralelo para mayor eficiencia
+        await Promise.all([
+          getMenus().then(setMenus),
+          fetchAsignacionMenus()
+        ]);
+      } catch (error) {
+        console.error("Error al cargar datos iniciales:", error);
+      } finally {
+        setCargandoMenus(false);
       }
-    } catch (error) {
-      console.log("Error al refrescar menús/asignaciones:", error);
-    } finally {
-      setCargandoMenus(false);
-    }
-  }, [asignacionMenu]);
+    };
+
+    loadInitialData();
+  }, [fetchAsignacionMenus]); // El efecto se ejecuta solo si la función de fetch cambia (lo cual es raro)
 
   useEffect(() => {
     let timer;
@@ -108,10 +107,6 @@ export default function MenuPlanner() {
     }
     return () => clearTimeout(timer);
   }, [cargandoMenus]);
-
-  useEffect(() => {
-    refetchMenusYAsignaciones();
-  }, [refetchMenusYAsignaciones]);
 
   const obtenerFechasSemana = (fechaInicio) => {
     const fechas = [];
@@ -124,24 +119,21 @@ export default function MenuPlanner() {
   };
 
   const formatearFecha = (fecha) => {
-    return fecha.toLocaleDateString('es-ES', { 
-      day: '2-digit', 
-      month: '2-digit' 
+    return fecha.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit'
     });
   };
 
   const formatearFechaISO = useCallback((fecha) => {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return fecha.toISOString().split('T')[0];
   }, []);
 
-  const fechasSemana = useMemo(() => 
-    obtenerFechasSemana(semanaSeleccionada), 
+  const fechasSemana = useMemo(() =>
+    obtenerFechasSemana(semanaSeleccionada),
     [semanaSeleccionada]
   );
-    
+
   const formattedWeekTitle = useMemo(() => {
     const weekStart = fechasSemana[0];
     const weekEnd = fechasSemana[6];
@@ -149,13 +141,11 @@ export default function MenuPlanner() {
     return `Semana ${weekNumber}: ${format(weekStart, 'd MMM', { locale: es })} - ${format(weekEnd, 'd MMM, yyyy', { locale: es })}`;
   }, [fechasSemana]);
 
-  // --- 3. NUEVA LÓGICA PARA SABER SI ESTAMOS EN LA SEMANA ACTUAL ---
-  const isCurrentWeek = useMemo(() => 
+  const isCurrentWeek = useMemo(() =>
     isSameWeek(semanaSeleccionada, new Date(), { weekStartsOn: 1 }),
     [semanaSeleccionada]
   );
-  
-  // El resto de tu código original se mantiene intacto...
+
   const semanaAnterior = () => {
     const nuevaSemana = new Date(semanaSeleccionada);
     nuevaSemana.setDate(semanaSeleccionada.getDate() - 7);
@@ -167,50 +157,29 @@ export default function MenuPlanner() {
     nuevaSemana.setDate(semanaSeleccionada.getDate() + 7);
     setSemanaSeleccionada(nuevaSemana);
   };
-  
+
   const handleAbrirModal = useCallback((dia, tipoComida) => {
     setModalInfo({ dia, comida: tipoComida });
     setModalOpen(true);
   }, []);
-  
+
   return (
     <section>
-      {/* --- 4. SELECTOR DE SEMANA MODIFICADO --- */}
       <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
         <div className="flex items-center justify-between">
-          <button
-            onClick={semanaAnterior}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          
+          <button onClick={semanaAnterior} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronLeft size={24} /></button>
           <div className="flex items-center gap-4">
-            {/* El botón "Hoy" solo aparece si no estamos en la semana actual */}
             {!isCurrentWeek && (
-              <button 
-                onClick={handleGoToCurrentWeek}
-                className="px-3 py-1 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm flex items-center gap-2"
-              >
-                <CalendarClock size={16} />
-                Hoy
+              <button onClick={handleGoToCurrentWeek} className="px-3 py-1 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm flex items-center gap-2">
+                <CalendarClock size={16} /> Hoy
               </button>
             )}
-            <h2 className="text-xl font-bold text-gray-800 text-center min-w-[300px]">
-              {formattedWeekTitle}
-            </h2>
+            <h2 className="text-xl font-bold text-gray-800 text-center min-w-[300px]">{formattedWeekTitle}</h2>
           </div>
-          
-          <button
-            onClick={semanaSiguiente}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ChevronRight size={24} />
-          </button>
+          <button onClick={semanaSiguiente} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronRight size={24} /></button>
         </div>
       </div>
-      
-      {/* El resto de tu componente se mantiene exactamente igual */}
+
       <div className="relative">
         {mostrarLoader && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
@@ -234,7 +203,7 @@ export default function MenuPlanner() {
                     <div className="flex items-center gap-2">
                       <User2 className="text-gray-500" />
                       <span className="text-gray-600 font-medium">Comensales:</span>
-                      <input type="number" min={1} value={comensales[dia]} onChange={(e) => setComensales((prev) => ({...prev, [dia]: Number(e.target.value)}))} className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold" />
+                      <input type="number" min={1} value={comensales[dia]} onChange={(e) => setComensales((prev) => ({ ...prev, [dia]: Number(e.target.value) }))} className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold" />
                     </div>
                   </div>
                   <div className="flex flex-col md:flex-row gap-4">
@@ -296,4 +265,4 @@ export default function MenuPlanner() {
       )}
     </section>
   );
-};
+}
