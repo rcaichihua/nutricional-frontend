@@ -1,18 +1,16 @@
 import { useState } from "react";
-import { PlusCircle, Edit, Trash2, Eye, X, ChevronLeft, ChevronRight } from "lucide-react";
-// --- CORRECCIÓN: Se añaden las extensiones .jsx a las importaciones para asegurar la resolución de rutas ---
-import { useRecetas } from "../hooks/useRecetas.jsx";
-import RecetaFormModal from "../components/RecetaFormModal.jsx";
-import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail.jsx";
+// 1. Se importa el nuevo ícono 'Copy'
+import { PlusCircle, Edit, Trash2, Eye, X, Copy, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRecetas } from "../hooks/useRecetas";
+import RecetaFormModal from "../components/RecetaFormModal";
+import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 
 export default function RecipeManager({ onVerDetalle }) {
   const {
     recetasConInsumos,
     loadingRecetasConInsumos: loading,
-    refetchRecetasConInsumos: refetch,
     saveReceta,
     deleteReceta,
-    // Se obtienen los estados y funciones de paginación del hook
     page,
     totalPages,
     goToNextPage,
@@ -33,12 +31,28 @@ export default function RecipeManager({ onVerDetalle }) {
     setSelectedReceta(null);
   };
 
+  // --- 2. NUEVA FUNCIÓN PARA MANEJAR LA COPIA DE RECETAS ---
+  const handleCopy = (recetaToCopy) => {
+    // Se crea una copia profunda del objeto para no modificar el original
+    const copiedReceta = JSON.parse(JSON.stringify(recetaToCopy));
+
+    // Se elimina el ID para que sea tratada como una nueva receta
+    delete copiedReceta.recetaId;
+
+    // Se modifica el nombre para indicar que es una copia
+    copiedReceta.nombre = `${copiedReceta.nombre} - Copia`;
+
+    // Se abre el modal con los datos de la receta copiada
+    openModal(copiedReceta);
+  };
+
   const handleSaveReceta = async (recetaData) => {
     try {
       const ok = await saveReceta(recetaData, closeModal);
       if (ok) {
         alert(
-          selectedReceta
+          // Se ajusta el mensaje para diferenciar entre crear, editar y copiar
+          recetaData.recetaId
             ? "Receta actualizada exitosamente"
             : "Receta creada exitosamente"
         );
@@ -50,11 +64,11 @@ export default function RecipeManager({ onVerDetalle }) {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("¿Eliminar receta?")) {
+    if (window.confirm("¿Estás seguro de que deseas eliminar esta receta?")) {
       try {
-        await deleteReceta(id, refetch);
+        await deleteReceta(id);
       } catch (error) {
-        alert("Error al eliminar la receta", error);
+        alert("Error al eliminar la receta: " + error.message);
       }
     }
   };
@@ -76,7 +90,7 @@ export default function RecipeManager({ onVerDetalle }) {
 
       {loading ? (
         <div className="flex justify-center items-center min-h-[400px]">
-            <p className="text-gray-500">Cargando recetas...</p>
+          <p className="text-gray-500">Cargando recetas...</p>
         </div>
       ) : (
         <>
@@ -91,7 +105,7 @@ export default function RecipeManager({ onVerDetalle }) {
                     {receta.nombre}
                   </h3>
                   <ul className="list-disc list-inside text-sm text-gray-600 my-2 pl-2">
-                    {receta.insumos.map((insumo, i) => (
+                    {(receta.insumos || []).map((insumo, i) => (
                       <li key={i}>
                         {insumo.nombreInsumo} ({insumo.cantidadEnReceta ?? insumo.cantidad} {insumo.unidadMedida ?? insumo.unidad})
                       </li>
@@ -105,6 +119,14 @@ export default function RecipeManager({ onVerDetalle }) {
                     title="Ver detalle"
                   >
                     <Eye size={18} />
+                  </button>
+                  {/* --- 3. NUEVO BOTÓN DE COPIAR --- */}
+                  <button
+                    className="p-2 text-yellow-600 hover:bg-yellow-100 rounded-full"
+                    onClick={() => handleCopy(receta)}
+                    title="Copiar Receta"
+                  >
+                    <Copy size={18} />
                   </button>
                   <button
                     className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
@@ -175,3 +197,4 @@ export default function RecipeManager({ onVerDetalle }) {
     </div>
   );
 }
+
