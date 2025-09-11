@@ -45,3 +45,14 @@ export async function editarReceta(receta: Receta): Promise<Receta> {
     body: JSON.stringify(receta),
   });
 }
+// --- NUEVA FUNCIÓN PARA ELIMINAR UNA RECETA ---
+/**
+ * Envía una petición para eliminar (lógicamente) una receta por su ID.
+ * @param recetaId El ID de la receta a eliminar.
+ */
+export async function eliminarReceta(recetaId: number): Promise<void> {
+  return fetchJson(`${API_ENDPOINT}/${recetaId}`, {
+    method: "DELETE",
+  });
+}
+
