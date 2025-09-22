@@ -1,9 +1,11 @@
+import SucursalSelect from "../components/SucursalSelect";
+import { useSucursales } from "../hooks/useSucursales";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { User2, PlusCircle, Trash2, ChevronLeft, ChevronRight, CalendarClock } from "lucide-react";
 import { format, getWeek, isSameWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useRecetas } from "../hooks/useRecetas";
-import { getMenus, crearMenu, editarMenu } from "../api/menus";
+//import { useRecetas } from "../hooks/useRecetas";
+import { getMenus } from "../api/menus";
 import SelectRecipeModal from "../components/SelectRecipeModal";
 import SelectMenuModal from "../components/SelectMenuModal";
 import { useAsignacionMenu } from "../hooks/useAsignacionMenu";
@@ -21,9 +23,11 @@ const COMIDAS = [
 ];
 
 export default function MenuPlanner() {
+  // sucursal seleccionada y lista desde el hook que ya creaste
+  const { selectedId: sucursalId, selected } = useSucursales();
   // Se destructura fetchAsignacionMenus para usarlo en el useEffect
   const { asignacionMenu, createAsignacionMenu, deleteAsignacionMenu, fetchAsignacionMenus } = useAsignacionMenu();
-  const { recetasConInsumos } = useRecetas({ onlyConInsumos: true });
+  // const { recetasConInsumos } = useRecetas({ onlyConInsumos: true });
 
   const [menusPorDiaComida, setMenusPorDiaComida] = useState({});
 
@@ -167,6 +171,7 @@ export default function MenuPlanner() {
     <section>
       <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
         <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4"></div>
           <button onClick={semanaAnterior} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronLeft size={24} /></button>
           <div className="flex items-center gap-4">
             {!isCurrentWeek && (
@@ -177,6 +182,15 @@ export default function MenuPlanner() {
             <h2 className="text-xl font-bold text-gray-800 text-center min-w-[300px]">{formattedWeekTitle}</h2>
           </div>
           <button onClick={semanaSiguiente} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronRight size={24} /></button>
+          <div className="flex items-center gap-3">
+            {/* muestra sucursal actual */}
+            {selected && (
+              <span className="text-sm text-gray-600">Comedor: <strong>{selected.nombre}</strong></span>
+            )}
+            {/* selector (actualiza localStorage y estado global del hook) */}
+            <SucursalSelect />
+            <button onClick={semanaSiguiente} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronRight size={24} /></button>
+          </div>
         </div>
       </div>
 
@@ -254,9 +268,11 @@ export default function MenuPlanner() {
             const tipoComida = modalInfo.comida;
             const menuIds = seleccionados.map(m => m.menuId);
             const dto = { fechaAsignacion, tipoComida, menuIds };
-            const ok = await createAsignacionMenu(dto, () => {
-              alert("Asignación guardada exitosamente");
-            });
+            const ok = await createAsignacionMenu(
+              dto,
+              () => { alert("Asignación guardada exitosamente"); },
+              { sucursalId } // <- pasa sucursal al hook/api
+            );
             if (!ok) {
               alert("Error al guardar la asignación");
             }
