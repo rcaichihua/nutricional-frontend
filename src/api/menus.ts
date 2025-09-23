@@ -6,14 +6,34 @@ const API_ENDPOINT = `/menus`;
 
 type SucursalOpt = { sucursalId?: number | string };
 
-/** Mezcla headers y agrega el header de sucursal si viene */
+/** Obtiene el id de sucursal desde localStorage (plano o dentro de "auth") */
+function getStoredSucursalId(): number | null {
+  const raw = localStorage.getItem("sucursalId");
+  if (raw != null) return Number(raw);
+
+  const authRaw = localStorage.getItem("auth");
+  if (authRaw) {
+    try {
+      const auth = JSON.parse(authRaw);
+      if (auth?.defaultSucursalId != null) return Number(auth.defaultSucursalId);
+    } catch {
+      // ignore JSON error
+    }
+  }
+  return null;
+}
+
+/** Mezcla headers y agrega el header de sucursal (de options o de localStorage) */
 function withSucursalHeader(
   init: RequestInit | undefined,
   options?: SucursalOpt
 ): RequestInit {
   const headers = new Headers(init?.headers || {});
-  if (options?.sucursalId != null) {
-    headers.set("X-Sucursal-Id", String(options.sucursalId));
+  const sucursalId =
+    options?.sucursalId != null ? Number(options.sucursalId) : getStoredSucursalId();
+
+  if (sucursalId != null && !Number.isNaN(sucursalId)) {
+    headers.set("X-Sucursal-Id", String(sucursalId));
   }
   return { ...init, headers };
 }
@@ -59,7 +79,7 @@ export async function getMenuValoresNutricionalesById(
 
 /* ===================== Asignaciones (con sucursal) ===================== */
 
-/** Crea asignaciones para una fecha/tipoComida en la sucursal actual */
+/** Crea asignaciones para una fecha/tipoComida usando la sucursal guardada */
 export async function crearAsignacionMenu(
   dto: any,
   options?: SucursalOpt
@@ -76,17 +96,26 @@ export async function crearAsignacionMenu(
   );
 }
 
-/** Lista asignaciones (semana/actual) para la sucursal */
+/** Lista asignaciones para la sucursal guardada */
 export async function getAsignacionMenus(
   options?: SucursalOpt
 ): Promise<any[]> {
-  return fetchJson(
-    `${API_ENDPOINT}/asignaciones`,
-    withSucursalHeader(undefined, options)
-  );
+  let url = `${API_ENDPOINT}/asignaciones`;
+
+  // El backend espera ?sucursalId=...
+  const qp: string[] = [];
+  if (options?.sucursalId != null) {
+    qp.push(`sucursalId=${encodeURIComponent(String(options.sucursalId))}`);
+  }
+  // cache-buster para evitar resultados cacheados
+  qp.push(`_=${Date.now()}`);
+
+  if (qp.length) url += `?${qp.join("&")}`;
+
+  return fetchJson(url);
 }
 
-/** Elimina una asignación específica en la sucursal */
+/** Elimina una asignación específica en la sucursal (header por consistencia) */
 export async function eliminarAsignacionMenu(
   asignacionMenuId: number,
   options?: SucursalOpt
@@ -102,7 +131,7 @@ export async function eliminarAsignacionMenu(
   );
 }
 
-/** Consulta asignaciones por día para la sucursal */
+/** Consulta asignaciones por día en la sucursal guardada */
 export async function getAsignacionMenusByDay(
   fecha: string,
   options?: SucursalOpt

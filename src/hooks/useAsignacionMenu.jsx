@@ -1,17 +1,12 @@
 // src/hooks/useAsignacionMenu.jsx
 import { useCallback, useEffect, useState } from "react";
 import {
-  crearAsignacionMenu,
+  crearAsignacionMenu as apiCrear,
+  //getAsignacionMenus as apiList,
+  eliminarAsignacionMenu as apiDelete,
   getAsignacionMenus,
-  eliminarAsignacionMenu,
 } from "../api/menus";
 
-/**
- * Todas las funciones aceptan un options opcional: { sucursalId?: number|string }
- * Si no viene, se toma de localStorage ("sucursalId").
- * Asegúrate de que en ../api/menus las funciones acepten ese options
- * y envíen sucursalId (encabezado X-Sucursal-Id o query ?sucursalId=...).
- */
 export function useAsignacionMenu() {
   const [asignacionMenu, setAsignacionMenu] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,28 +18,50 @@ export function useAsignacionMenu() {
     return sidFromOpt ?? (sidFromStorage ? Number(sidFromStorage) : undefined);
   };
 
-  const fetchAsignacionMenus = useCallback(async (options) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const sucursalId = resolveSucursalId(options);
-      const data = await getAsignacionMenus({ sucursalId });
-      setAsignacionMenu(data);
-    } catch (err) {
-      setError(err?.message || "Error al cargar asignaciones de menú");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  /*const normalize = (raw) =>
+    (raw || []).map((a) => ({
+      ...a,
+      // Si viene "2025-09-22T00:00:00", me quedo con "2025-09-22"
+      fechaAsignacion:
+        typeof a.fechaAsignacion === "string"
+          ? a.fechaAsignacion.slice(0, 10)
+          : a.fechaAsignacion,
+    }));*/
 
+  const fetchAsignacionMenus = useCallback(async (options) => {
+  setLoading(true);
+  setError(null);
+  try {
+    const sucursalId = resolveSucursalId(options);
+    const data = await getAsignacionMenus({ sucursalId });
+
+    // 👇 NORMALIZA: fuerza 'YYYY-MM-DD' para que el filtro semanal funcione
+    const sane = (Array.isArray(data) ? data : []).map((a) => ({
+      ...a,
+      fechaAsignacion:
+        typeof a.fechaAsignacion === "string"
+          ? a.fechaAsignacion.slice(0, 10) // "2025-09-22T00:00:00" -> "2025-09-22"
+          : a.fechaAsignacion,
+    }));
+
+    setAsignacionMenu(sane);
+    return sane;
+  } catch (err) {
+    setError(err?.message || "Error al cargar asignaciones de menú");
+    setAsignacionMenu([]);
+    return [];
+  } finally {
+    setLoading(false);
+  }
+}, []);
   const createAsignacionMenu = useCallback(
-    async (asignacion, onSuccess, options) => {
+    async (dto, onSuccess, options) => {
       setLoading(true);
       setError(null);
       try {
         const sucursalId = resolveSucursalId(options);
-        await crearAsignacionMenu(asignacion, { sucursalId });
-        await fetchAsignacionMenus({ sucursalId }); // recarga con la misma sucursal
+        await apiCrear(dto, { sucursalId });
+        await fetchAsignacionMenus({ sucursalId }); // 👈 refresco único (normaliza)
         onSuccess?.();
         return true;
       } catch (err) {
@@ -63,11 +80,8 @@ export function useAsignacionMenu() {
       setError(null);
       try {
         const sucursalId = resolveSucursalId(options);
-        await eliminarAsignacionMenu(asignacionMenuId, { sucursalId });
-        // UI optimista: quitamos localmente; luego puedes forzar refetch si prefieres.
-        setAsignacionMenu((prev) =>
-          prev.filter((asig) => asig.asignacionMenuId !== asignacionMenuId)
-        );
+        await apiDelete(asignacionMenuId, { sucursalId });
+        await fetchAsignacionMenus({ sucursalId }); // 👈 refresco único (normaliza)
         return true;
       } catch (err) {
         setError(err?.message || "Error al eliminar la asignación de menú");
@@ -76,20 +90,19 @@ export function useAsignacionMenu() {
         setLoading(false);
       }
     },
-    []
+    [fetchAsignacionMenus]
   );
 
   useEffect(() => {
-    // primera carga con la sucursal del localStorage (si existe)
-    fetchAsignacionMenus();
+    fetchAsignacionMenus(); // primera carga (si hay sucursal en storage)
   }, [fetchAsignacionMenus]);
 
   return {
     asignacionMenu,
     loading,
     error,
-    fetchAsignacionMenus,     // (options?: {sucursalId})
-    createAsignacionMenu,     // (dto, onSuccess?, options?: {sucursalId})
-    deleteAsignacionMenu,     // (id, options?: {sucursalId})
+    fetchAsignacionMenus,
+    createAsignacionMenu,
+    deleteAsignacionMenu,
   };
 }

@@ -4,10 +4,13 @@ import { useSucursales } from "../hooks/useSucursales";
 export default function SucursalSelect({ className = "", label = "Comedor" }) {
   const { sucursales, selectedId, select } = useSucursales();
 
-  if (!sucursales.length) return null;
+  if (!sucursales?.length) return null;
 
   return (
-    <label className={className} style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+    <label
+      className={className}
+      style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
+    >
       <span>{label}:</span>
       <select
         value={selectedId ?? ""}

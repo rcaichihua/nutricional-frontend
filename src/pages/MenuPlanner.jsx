@@ -1,19 +1,30 @@
+// src/pages/MenuPlanner.jsx
 import SucursalSelect from "../components/SucursalSelect";
 import { useSucursales } from "../hooks/useSucursales";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { User2, PlusCircle, Trash2, ChevronLeft, ChevronRight, CalendarClock } from "lucide-react";
-import { format, getWeek, isSameWeek } from 'date-fns';
-import { es } from 'date-fns/locale';
-//import { useRecetas } from "../hooks/useRecetas";
+import {
+  User2,
+  PlusCircle,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  CalendarClock,
+  RefreshCw,
+} from "lucide-react";
+import { format, getWeek, isSameWeek } from "date-fns";
+import { es } from "date-fns/locale";
 import { getMenus } from "../api/menus";
-import SelectRecipeModal from "../components/SelectRecipeModal";
 import SelectMenuModal from "../components/SelectMenuModal";
 import { useAsignacionMenu } from "../hooks/useAsignacionMenu";
 
-// Mover constantes fuera del componente
 const DIAS_SEMANA = [
-  "Lunes", "Martes", "Miércoles", "Jueves",
-  "Viernes", "Sábado", "Domingo"
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
 ];
 
 const COMIDAS = [
@@ -23,35 +34,15 @@ const COMIDAS = [
 ];
 
 export default function MenuPlanner() {
-  // sucursal seleccionada y lista desde el hook que ya creaste
   const { selectedId: sucursalId, selected } = useSucursales();
-  // Se destructura fetchAsignacionMenus para usarlo en el useEffect
-  const { asignacionMenu, createAsignacionMenu, deleteAsignacionMenu, fetchAsignacionMenus } = useAsignacionMenu();
-  // const { recetasConInsumos } = useRecetas({ onlyConInsumos: true });
+  const {
+    asignacionMenu,
+    createAsignacionMenu,
+    deleteAsignacionMenu,
+    fetchAsignacionMenus,
+  } = useAsignacionMenu();
 
   const [menusPorDiaComida, setMenusPorDiaComida] = useState({});
-
-  useEffect(() => {
-    const agrupados = {};
-    asignacionMenu.forEach((asig) => {
-      const fecha = asig.fechaAsignacion;
-      const tipo = asig.tipoComida;
-      if (!agrupados[fecha]) agrupados[fecha] = {};
-      if (!agrupados[fecha][tipo]) agrupados[fecha][tipo] = [];
-      agrupados[fecha][tipo].push(asig);
-    });
-    setMenusPorDiaComida(agrupados);
-  }, [asignacionMenu]);
-
-  const handleEliminarAsignacion = useCallback(async (asignacionMenuId) => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar este menú asignado?")) {
-      const success = await deleteAsignacionMenu(asignacionMenuId);
-
-      if (!success) {
-        alert("Hubo un error al eliminar la asignación.");
-      }
-    }
-  }, [deleteAsignacionMenu]);
 
   const [semanaSeleccionada, setSemanaSeleccionada] = useState(() => {
     const hoy = new Date();
@@ -82,36 +73,6 @@ export default function MenuPlanner() {
   const [cargandoMenus, setCargandoMenus] = useState(true);
   const [mostrarLoader, setMostrarLoader] = useState(false);
 
-  // --- CORRECCIÓN: Se simplifica la carga de datos a un solo useEffect para evitar el bucle infinito ---
-  useEffect(() => {
-    const loadInitialData = async () => {
-      setCargandoMenus(true);
-      try {
-        // Se ejecutan ambas cargas de datos en paralelo para mayor eficiencia
-        await Promise.all([
-          getMenus().then(setMenus),
-          fetchAsignacionMenus()
-        ]);
-      } catch (error) {
-        console.error("Error al cargar datos iniciales:", error);
-      } finally {
-        setCargandoMenus(false);
-      }
-    };
-
-    loadInitialData();
-  }, [fetchAsignacionMenus]); // El efecto se ejecuta solo si la función de fetch cambia (lo cual es raro)
-
-  useEffect(() => {
-    let timer;
-    if (cargandoMenus) {
-      timer = setTimeout(() => setMostrarLoader(true), 300);
-    } else {
-      setMostrarLoader(false);
-    }
-    return () => clearTimeout(timer);
-  }, [cargandoMenus]);
-
   const obtenerFechasSemana = (fechaInicio) => {
     const fechas = [];
     for (let i = 0; i < 7; i++) {
@@ -122,44 +83,99 @@ export default function MenuPlanner() {
     return fechas;
   };
 
-  const formatearFecha = (fecha) => {
-    return fecha.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit'
-    });
-  };
+  const formatearFecha = (fecha) =>
+    fecha.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
 
-  const formatearFechaISO = useCallback((fecha) => {
-    return fecha.toISOString().split('T')[0];
-  }, []);
+  const formatearFechaISO = useCallback(
+    (fecha) => fecha.toISOString().split("T")[0],
+    []
+  );
 
-  const fechasSemana = useMemo(() =>
-    obtenerFechasSemana(semanaSeleccionada),
+  const fechasSemana = useMemo(
+    () => obtenerFechasSemana(semanaSeleccionada),
     [semanaSeleccionada]
   );
+
+  const fechasSemanaSet = useMemo(
+    () => new Set(fechasSemana.map((f) => formatearFechaISO(f))),
+    [fechasSemana, formatearFechaISO]
+  );
+
+  // Carga inicial + cuando cambia la sucursal
+  useEffect(() => {
+    const load = async () => {
+      setCargandoMenus(true);
+      try {
+        await Promise.all([
+          getMenus().then(setMenus),
+          sucursalId ? fetchAsignacionMenus({ sucursalId }) : Promise.resolve(),
+        ]);
+      } catch (e) {
+        console.error("Error al cargar datos iniciales:", e);
+      } finally {
+        setCargandoMenus(false);
+      }
+    };
+    load();
+  }, [sucursalId, fetchAsignacionMenus]);
+
+  // Loader UX
+  useEffect(() => {
+    let t;
+    if (cargandoMenus) {
+      t = setTimeout(() => setMostrarLoader(true), 300);
+    } else {
+      setMostrarLoader(false);
+    }
+    return () => clearTimeout(t);
+  }, [cargandoMenus]);
+
+  // Agrupa SOLO la semana visible
+  useEffect(() => {
+    const agrupados = {};
+    (asignacionMenu || [])
+      .filter((a) => fechasSemanaSet.has(a.fechaAsignacion))
+      .forEach((asig) => {
+        const fecha = asig.fechaAsignacion;
+        const tipo = asig.tipoComida;
+        if (!agrupados[fecha]) agrupados[fecha] = {};
+        if (!agrupados[fecha][tipo]) agrupados[fecha][tipo] = [];
+        agrupados[fecha][tipo].push(asig);
+      });
+    setMenusPorDiaComida(agrupados);
+  }, [asignacionMenu, fechasSemanaSet]);
+
+  // También refresca al cambiar sucursal (extra, por si ya estaba cargado)
+  useEffect(() => {
+    if (sucursalId) fetchAsignacionMenus({ sucursalId });
+  }, [sucursalId, fetchAsignacionMenus]);
 
   const formattedWeekTitle = useMemo(() => {
     const weekStart = fechasSemana[0];
     const weekEnd = fechasSemana[6];
     const weekNumber = getWeek(weekStart, { weekStartsOn: 1, locale: es });
-    return `Semana ${weekNumber}: ${format(weekStart, 'd MMM', { locale: es })} - ${format(weekEnd, 'd MMM, yyyy', { locale: es })}`;
+    return `Semana ${weekNumber}: ${format(weekStart, "d MMM", { locale: es })} - ${format(
+      weekEnd,
+      "d MMM, yyyy",
+      { locale: es }
+    )}`;
   }, [fechasSemana]);
 
-  const isCurrentWeek = useMemo(() =>
-    isSameWeek(semanaSeleccionada, new Date(), { weekStartsOn: 1 }),
+  const isCurrentWeek = useMemo(
+    () => isSameWeek(semanaSeleccionada, new Date(), { weekStartsOn: 1 }),
     [semanaSeleccionada]
   );
 
   const semanaAnterior = () => {
-    const nuevaSemana = new Date(semanaSeleccionada);
-    nuevaSemana.setDate(semanaSeleccionada.getDate() - 7);
-    setSemanaSeleccionada(nuevaSemana);
+    const nueva = new Date(semanaSeleccionada);
+    nueva.setDate(semanaSeleccionada.getDate() - 7);
+    setSemanaSeleccionada(nueva);
   };
 
   const semanaSiguiente = () => {
-    const nuevaSemana = new Date(semanaSeleccionada);
-    nuevaSemana.setDate(semanaSeleccionada.getDate() + 7);
-    setSemanaSeleccionada(nuevaSemana);
+    const nueva = new Date(semanaSeleccionada);
+    nueva.setDate(semanaSeleccionada.getDate() + 7);
+    setSemanaSeleccionada(nueva);
   };
 
   const handleAbrirModal = useCallback((dia, tipoComida) => {
@@ -167,75 +183,183 @@ export default function MenuPlanner() {
     setModalOpen(true);
   }, []);
 
+  const handleEliminarAsignacion = useCallback(
+    async (asignacionMenuId) => {
+      if (window.confirm("¿Estás seguro de que deseas eliminar este menú asignado?")) {
+        const success = await deleteAsignacionMenu(asignacionMenuId, { sucursalId });
+        if (!success) alert("Hubo un error al eliminar la asignación.");
+      }
+    },
+    [deleteAsignacionMenu, sucursalId]
+  );
+
+  const handleRefetch = useCallback(async () => {
+    if (!sucursalId) {
+      alert("Selecciona un comedor primero.");
+      return;
+    }
+    try {
+      setCargandoMenus(true);
+      //const data = 
+      await fetchAsignacionMenus({ sucursalId }); // 👈 await
+      // Opcional: debug para confirmar fechas normalizadas
+      // console.log("Refetch fechas:", data.map(d => d.fechaAsignacion));
+      setCargandoMenus(false);
+    } catch (e) {
+      console.error("Error al refrescar asignaciones:", e);
+    } finally {
+      setCargandoMenus(false);
+    }
+  }, [sucursalId, fetchAsignacionMenus]);
+
   return (
     <section>
-      <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center justify-between gap-4"></div>
-          <button onClick={semanaAnterior} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronLeft size={24} /></button>
-          <div className="flex items-center gap-4">
-            {!isCurrentWeek && (
-              <button onClick={handleGoToCurrentWeek} className="px-3 py-1 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm flex items-center gap-2">
-                <CalendarClock size={16} /> Hoy
-              </button>
-            )}
-            <h2 className="text-xl font-bold text-gray-800 text-center min-w-[300px]">{formattedWeekTitle}</h2>
+      {/* CABECERA RESPONSIVE */}
+      <div className="bg-white rounded-2xl shadow-md p-4 md:p-6 mb-6">
+        <div className="flex flex-col gap-4">
+          {/* Fila 1: navegación de semana */}
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={semanaAnterior}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft size={22} />
+            </button>
+
+            <div className="flex items-center gap-2">
+              {!isCurrentWeek && (
+                <button
+                  onClick={handleGoToCurrentWeek}
+                  className="px-3 py-1 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm flex items-center gap-2"
+                >
+                  <CalendarClock size={16} /> Hoy
+                </button>
+              )}
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 text-center min-w-[220px] md:min-w-[300px]">
+                {formattedWeekTitle}
+              </h2>
+            </div>
+
+            <button
+              onClick={semanaSiguiente}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight size={22} />
+            </button>
           </div>
-          <button onClick={semanaSiguiente} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronRight size={24} /></button>
-          <div className="flex items-center gap-3">
-            {/* muestra sucursal actual */}
+
+          {/* Fila 2: selector de sucursal + actualizar (wrap en mobile) */}
+          <div className="flex flex-wrap items-center gap-3 justify-end">
             {selected && (
-              <span className="text-sm text-gray-600">Comedor: <strong>{selected.nombre}</strong></span>
+              <span className="text-sm text-gray-600">
+                Comedor: <strong>{selected.nombre}</strong>
+              </span>
             )}
-            {/* selector (actualiza localStorage y estado global del hook) */}
             <SucursalSelect />
-            <button onClick={semanaSiguiente} className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ChevronRight size={24} /></button>
+            <button
+              onClick={handleRefetch}
+              disabled={!sucursalId}
+              className="px-3 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+              title={!sucursalId ? "Seleccione un comedor" : "Actualizar asignaciones"}
+            >
+              <RefreshCw size={16} /> Ver / Actualizar
+            </button>
           </div>
         </div>
       </div>
 
+      {/* CUERPO */}
       <div className="relative">
         {mostrarLoader && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
-            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-10">
+            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             <p className="mt-2 text-gray-600">Cargando menús...</p>
           </div>
         )}
+
         <div className={mostrarLoader ? "pointer-events-none opacity-50" : ""}>
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8">
             {DIAS_SEMANA.map((dia, index) => {
               const fechaISO = formatearFechaISO(fechasSemana[index]);
               const asignadosPorComida = menusPorDiaComida[fechaISO] || {};
               return (
-                <div key={dia} className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-4">
-                  <div className="flex flex-wrap items-center justify-between mb-2">
+                <div
+                  key={dia}
+                  className="bg-white rounded-2xl shadow-md p-4 md:p-6 flex flex-col gap-4"
+                >
+                  {/* Encabezado del día */}
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl font-extrabold">{dia}</span>
-                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">{formatearFecha(fechasSemana[index])}</span>
-                      {Object.values(asignadosPorComida).flat().length > 0 ? (<span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">Con menú asignado</span>) : (<span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg font-medium">Sin menú</span>)}
+                      <span className="text-lg md:text-xl font-extrabold">{dia}</span>
+                      <span className="text-xs md:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                        {formatearFecha(fechasSemana[index])}
+                      </span>
+                      {Object.values(asignadosPorComida).flat().length > 0 ? (
+                        <span className="text-[11px] md:text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
+                          Con menú asignado
+                        </span>
+                      ) : (
+                        <span className="text-[11px] md:text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg font-medium">
+                          Sin menú
+                        </span>
+                      )}
                     </div>
+
                     <div className="flex items-center gap-2">
                       <User2 className="text-gray-500" />
-                      <span className="text-gray-600 font-medium">Comensales:</span>
-                      <input type="number" min={1} value={comensales[dia]} onChange={(e) => setComensales((prev) => ({ ...prev, [dia]: Number(e.target.value) }))} className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold" />
+                      <span className="text-gray-600 font-medium text-sm">Comensales:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={comensales[dia]}
+                        onChange={(e) =>
+                          setComensales((prev) => ({
+                            ...prev,
+                            [dia]: Number(e.target.value),
+                          }))
+                        }
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold"
+                      />
                     </div>
                   </div>
-                  <div className="flex flex-col md:flex-row gap-4">
+
+                  {/* Comidas responsive: 1 col en móvil, 3 cols en md+ */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {COMIDAS.map(({ tipo, color }) => (
-                      <div key={tipo} className="flex-1 flex flex-col gap-2">
+                      <div key={tipo} className="flex flex-col gap-2">
                         <span className={`font-semibold ${color}`}>{tipo}</span>
+
                         <div className="space-y-2">
                           {(asignadosPorComida[tipo] || []).map((asignacion) => (
-                            <div key={asignacion.asignacionMenuId} className="w-full border-2 border-blue-200 rounded-xl py-3 px-4 flex items-center justify-between bg-blue-50 group">
-                              <span className="font-bold text-blue-700">{asignacion.menu.nombreMenu}</span>
-                              <button onClick={() => handleEliminarAsignacion(asignacion.asignacionMenuId)} className="opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar asignación de menú">
+                            <div
+                              key={asignacion.asignacionMenuId}
+                              className="w-full border-2 border-blue-200 rounded-xl py-3 px-4 flex items-center justify-between bg-blue-50 group"
+                            >
+                              <span className="font-bold text-blue-700 truncate">
+                                {asignacion.menu?.nombreMenu ?? "—"}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  handleEliminarAsignacion(asignacion.asignacionMenuId)
+                                }
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Eliminar asignación de menú"
+                              >
                                 <Trash2 className="text-red-500 hover:text-red-700" size={20} />
                               </button>
                             </div>
                           ))}
                         </div>
-                        <button className="mt-2 w-full border-2 border-dashed border-gray-300 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-500 hover:bg-gray-50 transition" onClick={() => handleAbrirModal(dia, tipo)}>
-                          <PlusCircle /> Asignar menu
+
+                        <button
+                          className="mt-2 w-full border-2 border-dashed border-gray-300 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+                          onClick={() => handleAbrirModal(dia, tipo)}
+                          disabled={!sucursalId}
+                          title={!sucursalId ? "Seleccione un comedor" : "Asignar menú"}
+                        >
+                          <PlusCircle /> Asignar menú
                         </button>
                       </div>
                     ))}
@@ -246,6 +370,8 @@ export default function MenuPlanner() {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
       {modalOpen && (
         <SelectMenuModal
           open={modalOpen}
@@ -264,18 +390,23 @@ export default function MenuPlanner() {
           })()}
           onSave={async (seleccionados) => {
             const idx = DIAS_SEMANA.indexOf(modalInfo.dia);
-            const fechaAsignacion = idx >= 0 ? formatearFechaISO(fechasSemana[idx]) : "";
+            const fechaAsignacion =
+              idx >= 0 ? formatearFechaISO(fechasSemana[idx]) : "";
             const tipoComida = modalInfo.comida;
-            const menuIds = seleccionados.map(m => m.menuId);
-            const dto = { fechaAsignacion, tipoComida, menuIds };
+            const menuIds = seleccionados.map((m) => m.menuId);
+            const dto = {
+              fechaAsignacion,
+              tipoComida,
+              menuIds,
+              comensales: comensales[modalInfo.dia] ?? 0,
+            };
+
             const ok = await createAsignacionMenu(
               dto,
-              () => { alert("Asignación guardada exitosamente"); },
-              { sucursalId } // <- pasa sucursal al hook/api
+              () => alert("Asignación guardada exitosamente"),
+              { sucursalId }
             );
-            if (!ok) {
-              alert("Error al guardar la asignación");
-            }
+            if (!ok) alert("Error al guardar la asignación");
           }}
         />
       )}
