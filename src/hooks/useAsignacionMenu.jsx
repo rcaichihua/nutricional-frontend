@@ -29,31 +29,33 @@ export function useAsignacionMenu() {
     }));*/
 
   const fetchAsignacionMenus = useCallback(async (options) => {
-  setLoading(true);
-  setError(null);
-  try {
-    const sucursalId = resolveSucursalId(options);
-    const data = await getAsignacionMenus({ sucursalId });
+    setLoading(true);
+    setError(null);
+    try {
+      const sucursalId = resolveSucursalId(options);
+      const data = await getAsignacionMenus({ sucursalId });
 
-    // 👇 NORMALIZA: fuerza 'YYYY-MM-DD' para que el filtro semanal funcione
-    const sane = (Array.isArray(data) ? data : []).map((a) => ({
-      ...a,
-      fechaAsignacion:
-        typeof a.fechaAsignacion === "string"
-          ? a.fechaAsignacion.slice(0, 10) // "2025-09-22T00:00:00" -> "2025-09-22"
-          : a.fechaAsignacion,
-    }));
+      console.log(`[DEBUG] Respuesta de la API para sucursal ${sucursalId}:`, data);
 
-    setAsignacionMenu(sane);
-    return sane;
-  } catch (err) {
-    setError(err?.message || "Error al cargar asignaciones de menú");
-    setAsignacionMenu([]);
-    return [];
-  } finally {
-    setLoading(false);
-  }
-}, []);
+      // 👇 NORMALIZA: fuerza 'YYYY-MM-DD' para que el filtro semanal funcione
+      const sane = (Array.isArray(data) ? data : []).map((a) => ({
+        ...a,
+        fechaAsignacion:
+          typeof a.fechaAsignacion === "string"
+            ? a.fechaAsignacion.slice(0, 10) // "2025-09-22T00:00:00" -> "2025-09-22"
+            : a.fechaAsignacion,
+      }));
+
+      setAsignacionMenu(sane);
+      return sane;
+    } catch (err) {
+      setError(err?.message || "Error al cargar asignaciones de menú");
+      setAsignacionMenu([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   const createAsignacionMenu = useCallback(
     async (dto, onSuccess, options) => {
       setLoading(true);

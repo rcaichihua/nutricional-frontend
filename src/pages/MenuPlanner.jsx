@@ -87,7 +87,7 @@ export default function MenuPlanner() {
     fecha.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" });
 
   const formatearFechaISO = useCallback(
-    (fecha) => fecha.toISOString().split("T")[0],
+    (fecha) => format(fecha, "yyyy-MM-dd"),
     []
   );
 
@@ -146,9 +146,9 @@ export default function MenuPlanner() {
   }, [asignacionMenu, fechasSemanaSet]);
 
   // También refresca al cambiar sucursal (extra, por si ya estaba cargado)
-  useEffect(() => {
-    if (sucursalId) fetchAsignacionMenus({ sucursalId });
-  }, [sucursalId, fetchAsignacionMenus]);
+  //useEffect(() => {
+  //  if (sucursalId) fetchAsignacionMenus({ sucursalId });
+  //}, [sucursalId, fetchAsignacionMenus]);
 
   const formattedWeekTitle = useMemo(() => {
     const weekStart = fechasSemana[0];
