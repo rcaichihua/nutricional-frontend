@@ -1,10 +1,10 @@
 // Variables globales de configuración
 
 // Opción 1: Para desarrollo local (si accedes desde la misma PC donde corre el backend)
-export const API_URL_BASE = "http://localhost:8088/api";
+//export const API_URL_BASE = "http://localhost:8088/api";
 
 // Opción 2: Para acceder desde otros dispositivos en la misma red (ej. un celular)
-// export const API_URL_BASE = "http://192.168.1.6:8088/api";
+export const API_URL_BASE = "http://192.168.1.6:8088/api";
 
 
 // El resto de tu archivo de constantes se mantiene igual...
@@ -14,7 +14,7 @@ export const APP_CONFIG = {
   APP_VERSION: '1.0.0',
 
   // Configuración de API
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api', // También corregido aquí
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api', 
   API_TIMEOUT: 10000,
 
   // Configuración de paginación

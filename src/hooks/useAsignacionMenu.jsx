@@ -35,7 +35,7 @@ export function useAsignacionMenu() {
       const sucursalId = resolveSucursalId(options);
       const data = await getAsignacionMenus({ sucursalId });
 
-      console.log(`[DEBUG] Respuesta de la API para sucursal ${sucursalId}:`, data);
+      //console.log(`[DEBUG] Respuesta de la API para sucursal ${sucursalId}:`, data);
 
       // 👇 NORMALIZA: fuerza 'YYYY-MM-DD' para que el filtro semanal funcione
       const sane = (Array.isArray(data) ? data : []).map((a) => ({

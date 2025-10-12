@@ -40,6 +40,7 @@ export default function MenuPlanner() {
     createAsignacionMenu,
     deleteAsignacionMenu,
     fetchAsignacionMenus,
+    loading,
   } = useAsignacionMenu();
 
   const [menusPorDiaComida, setMenusPorDiaComida] = useState({});
@@ -63,15 +64,16 @@ export default function MenuPlanner() {
   };
 
   const [comensales, setComensales] = useState(
-    DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 700 }), {})
+    DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 0 }), {})
   );
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInfo, setModalInfo] = useState({ dia: "", comida: "" });
 
   const [menus, setMenus] = useState([]);
-  const [cargandoMenus, setCargandoMenus] = useState(true);
-  const [mostrarLoader, setMostrarLoader] = useState(false);
+const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
+const [mostrarLoader, setMostrarLoader] = useState(false);
+const isLoading = cargandoCatalogo || loading;
 
   const obtenerFechasSemana = (fechaInicio) => {
     const fechas = [];
@@ -101,26 +103,25 @@ export default function MenuPlanner() {
     [fechasSemana, formatearFechaISO]
   );
 
-  // Carga inicial + cuando cambia la sucursal
+  // reinicia al cambiar de comedor y vuelve a cargar sus asignaciones
   useEffect(() => {
-    const load = async () => {
-      setCargandoMenus(true);
-      try {
-        await Promise.all([
-          getMenus().then(setMenus),
-          sucursalId ? fetchAsignacionMenus({ sucursalId }) : Promise.resolve(),
-        ]);
-      } catch (e) {
-        console.error("Error al cargar datos iniciales:", e);
-      } finally {
-        setCargandoMenus(false);
-      }
-    };
-    load();
-  }, [sucursalId, fetchAsignacionMenus]);
+  // limpia contenedores dependientes del comedor anterior
+  setMenusPorDiaComida({});
+  setComensales(defaultComensales());
+
+  if (sucursalId) {
+    fetchAsignacionMenus({ sucursalId });
+  }
+}, [sucursalId, fetchAsignacionMenus]);
+
+// carga de menús (catálogo) una sola vez
+  useEffect(() => {
+    getMenus().then(setMenus).catch(console.error);
+  }, []);
+
 
   // Loader UX
-  useEffect(() => {
+  /*useEffect(() => {
     let t;
     if (cargandoMenus) {
       t = setTimeout(() => setMostrarLoader(true), 300);
@@ -128,7 +129,7 @@ export default function MenuPlanner() {
       setMostrarLoader(false);
     }
     return () => clearTimeout(t);
-  }, [cargandoMenus]);
+  }, [cargandoMenus]);*/
 
   // Agrupa SOLO la semana visible
   useEffect(() => {
@@ -144,6 +145,65 @@ export default function MenuPlanner() {
       });
     setMenusPorDiaComida(agrupados);
   }, [asignacionMenu, fechasSemanaSet]);
+
+  useEffect(() => {
+  // Mapea fecha ISO -> nombre del día
+  const fechaIsoToDia = new Map(
+    fechasSemana.map((f, idx) => [formatearFechaISO(f), DIAS_SEMANA[idx]])
+  );
+
+  // Construye un objeto { "Lunes": 700, ... } a partir de las asignaciones de la semana visible
+  const comxDia = {};
+
+  (asignacionMenu || [])
+    .filter(a => fechaIsoToDia.has(a.fechaAsignacion)) // solo la semana visible
+    .forEach(a => {
+      const dia = fechaIsoToDia.get(a.fechaAsignacion);
+      // Regla: toma el primer comensales encontrado (o el mayor si prefieres)
+      if (comxDia[dia] == null) {
+        comxDia[dia] = a.comensales ?? 0;
+      } else {
+        // si prefieres quedarte con el mayor:
+        // comxDia[dia] = Math.max(comxDia[dia], a.comensales ?? 0);
+      }
+    });
+  // Aplica sobre el estado manteniendo el valor anterior en días sin asignación
+  setComensales(prev => {
+    const next = { ...prev };
+    DIAS_SEMANA.forEach(dia => {
+      if (comxDia[dia] != null) next[dia] = comxDia[dia];
+    });
+    return next;
+  });
+}, [asignacionMenu, fechasSemana, formatearFechaISO]);
+
+  useEffect(() => {
+    let active = true;
+    setCargandoCatalogo(true);
+    getMenus()
+      .then(m => { if (active) setMenus(m); })
+      .catch(console.error)
+      .finally(() => { if (active) setCargandoCatalogo(false); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    setMenusPorDiaComida({});
+    setComensales(defaultComensales());
+    if (sucursalId) {
+      fetchAsignacionMenus({ sucursalId }); // el hook pone/quita su propio loading
+    }
+  }, [sucursalId, fetchAsignacionMenus]);
+
+  useEffect(() => {
+  let t;
+  if (isLoading) {
+    t = setTimeout(() => setMostrarLoader(true), 300);
+  } else {
+    setMostrarLoader(false);
+  }
+  return () => clearTimeout(t);
+}, [isLoading]);
 
   // También refresca al cambiar sucursal (extra, por si ya estaba cargado)
   //useEffect(() => {
@@ -193,7 +253,10 @@ export default function MenuPlanner() {
     [deleteAsignacionMenu, sucursalId]
   );
 
-  const handleRefetch = useCallback(async () => {
+  const defaultComensales = () =>
+  DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 0 }), {});
+
+  /*const handleRefetch = useCallback(async () => {
     if (!sucursalId) {
       alert("Selecciona un comedor primero.");
       return;
@@ -210,10 +273,10 @@ export default function MenuPlanner() {
     } finally {
       setCargandoMenus(false);
     }
-  }, [sucursalId, fetchAsignacionMenus]);
+  }, [sucursalId, fetchAsignacionMenus]);*/
 
   return (
-    <section>
+    <section key={sucursalId ?? 'no-sucursal'}>
       {/* CABECERA RESPONSIVE */}
       <div className="bg-white rounded-2xl shadow-md p-4 md:p-6 mb-6">
         <div className="flex flex-col gap-4">
@@ -258,14 +321,6 @@ export default function MenuPlanner() {
               </span>
             )}
             <SucursalSelect />
-            <button
-              onClick={handleRefetch}
-              disabled={!sucursalId}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
-              title={!sucursalId ? "Seleccione un comedor" : "Actualizar asignaciones"}
-            >
-              <RefreshCw size={16} /> Ver / Actualizar
-            </button>
           </div>
         </div>
       </div>
@@ -309,7 +364,7 @@ export default function MenuPlanner() {
 
                     <div className="flex items-center gap-2">
                       <User2 className="text-gray-500" />
-                      <span className="text-gray-600 font-medium text-sm">Comensales:</span>
+                      <span className="text-gray-600 font-medium text-sm">Usuarios Almuerzo:</span>
                       <input
                         type="number"
                         min={1}

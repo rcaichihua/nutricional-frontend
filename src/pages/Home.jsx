@@ -9,8 +9,10 @@ import RecetaNutritionalDetail from "../components/RecetaNutritionalDetail";
 import Reports from "./Calendar";
 import { logout, getUsername } from "../api/auth";
 import { useNavigate } from "react-router-dom";
-import ChangePassword from "./ChangePassword";
+//import ChangePassword from "./ChangePassword";
+import SecurityPanel from "./SecurityPanel";
 import MenusManager from "./MenusManager";
+import SucursalProvider from '../context/SucursalProvider';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("planner");
@@ -148,17 +150,18 @@ export default function Home() {
           </button>
           <button
             className={`px-6 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all
-              ${activeTab === "changepassword"
+                ${activeTab === "security"
                 ? "bg-purple-500 text-white shadow-lg"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
-            onClick={() => setActiveTab("changepassword")}
+            // onClick={() => setActiveTab("changepassword")}
+            onClick={() => setActiveTab("security")}
           >
             <Wrench size={20} /> Seguridad
           </button>
         </div>
         <div className="w-full p-4 md:p-8">
-          {activeTab === "planner" && <MenuPlanner />}
+          {activeTab === "planner" && <SucursalProvider><MenuPlanner /></SucursalProvider>}
           {activeTab === "recipes" && (
             <RecipeManager
               onVerDetalle={(id) => {
@@ -188,8 +191,8 @@ export default function Home() {
           {activeTab === "alimentos" && <InsumosManager />}
           {activeTab === "nutrientes" && <MenuNutritionalDetail />}
           {activeTab === "nutrientes2" && <ComparativoNutricionalLocro />}
-          {activeTab === "calendar" && <Reports />}
-          {activeTab === "changepassword" && <ChangePassword />}
+          {activeTab === "calendar" && <SucursalProvider> <Reports /> </SucursalProvider> }
+          {activeTab === "security" && <SecurityPanel />}
         </div>
       </div>
     </div>

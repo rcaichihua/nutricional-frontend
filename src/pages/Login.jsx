@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+//import { useNavigate } from 'react-router-dom';
 import { login } from '../api/auth.ts';
 import { User, Lock, LoaderCircle } from 'lucide-react';
 
@@ -8,7 +8,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); // Se mantiene por si se usa en otro lugar, aunque no en handleSubmit
+  //const navigate = useNavigate(); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,11 +22,7 @@ const Login = () => {
     setLoading(true);
     try {
       await login(user, password);    
-      
-      // --- CORRECCIÓN CLAVE AQUÍ ---
-      // Se reemplazan navigate('/') y window.location.reload() por una sola línea.
-      // Esto fuerza al navegador a ir a la página principal y recargarla desde cero,
-      // asegurando que se lea el nuevo estado de autenticación.
+
       window.location.href = '/'; 
 
     } catch (err) {
