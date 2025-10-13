@@ -14,7 +14,7 @@ export default function Reports() {
   // asignaciones "lite" (con menú {menuId, nombreMenu}, sin recetas)
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const [menus, setMenus] = useState([]);
+  const [menus] = useState([]);
 
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [fechaParaImprimir, setFechaParaImprimir] = useState(null);
