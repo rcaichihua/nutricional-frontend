@@ -143,7 +143,7 @@ export default function Reports() {
             <FileText size={18} /> Exportar calendario a PDF
           </button>
           <button
-            onClick={imprimirMenuDelDia}
+            //onClick={imprimirMenuDelDia}
             disabled={!fechaParaImprimir || imprimiendo}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow transition-colors ${
               fechaParaImprimir
