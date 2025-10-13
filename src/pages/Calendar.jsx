@@ -118,8 +118,135 @@ export default function Reports() {
   };
 
   // === Imprimir menú del día (nota) ===
+// Función para imprimir el menú del día seleccionado
   const imprimirMenuDelDia = async () => {
-    alert("Por ahora la impresión por día solo muestra nombres de menú. Si necesitas recetas/insumos filtrados por comedor, lo integramos.");
+    if (!fechaParaImprimir) return;
+    setImprimiendo(true);
+    try {
+      const fechaStr = fechaParaImprimir.toISOString().split('T')[0];
+      // Obtener todos los menús asignados a ese día
+      const menusAsignados = menus.filter(m => m.fechaAsignacion === fechaStr);
+      if (!menusAsignados || menusAsignados.length === 0) {
+        alert('No hay menú registrado para este día.');
+        setImprimiendo(false);
+        return;
+      }
+      // Agrupar recetas por tipoComida de todos los menús
+      const categorias = ['Desayuno', 'Almuerzo', 'Cena'];
+      const recetasPorCategoria = {};
+      categorias.forEach(cat => {
+        recetasPorCategoria[cat] = [];
+      });
+      menusAsignados.forEach(asig => {
+        if (asig.menu && Array.isArray(asig.menu.recetas)) {
+          asig.menu.recetas.forEach(receta => {
+            if (categorias.includes(receta.tipoComida)) {
+              recetasPorCategoria[receta.tipoComida].push(receta);
+            }
+          });
+        }
+      });
+      // Crear PDF
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      let y = 60; // Altura título
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      // Logo en la esquina superior derecha
+      const logoUrl = `${window.location.origin}/logo-blima.jpg`;
+      // Convertir imagen a base64
+      const getImageBase64 = (url) => {
+        return new Promise((resolve, reject) => {
+          const img = new window.Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = function () {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg'));
+          };
+          img.onerror = function () {
+            reject(new Error('No se pudo cargar la imagen'));
+          };
+          img.src = url;
+        });
+      };
+      // Esperar la imagen y continuar
+      const logoBase64 = await getImageBase64(logoUrl);
+      pdf.addImage(logoBase64, 'JPEG', pageWidth - 80, 30, 60, 60);
+      // Contenido del PDF
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(15);
+      pdf.setTextColor('#0a3761');
+      pdf.text('SOCIEDAD DE BENEFICENCIA DE LIMA METROPOLITANA', pageWidth / 2, y, { align: 'center' });
+      y += 18;
+      pdf.setFontSize(13);
+      pdf.setTextColor('#17405c');
+      pdf.text('PROGRAMA SOCIAL DE APOYO ALIMENTARIO Y NUTRICIONAL', pageWidth / 2, y, { align: 'center' });
+      y += 16;
+      pdf.setFontSize(13);
+      pdf.setTextColor('#17405c');
+      pdf.text('SERVICIO DE NUTRICIÓN', pageWidth / 2, y, { align: 'center' });
+      y += 40;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(15);
+      pdf.setTextColor('#0a3761');
+      pdf.text('COMEDOR SANTA TERESITA', pageWidth / 2, y, { align: 'center' });
+      y += 22;
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(13);
+      pdf.setTextColor('#17405c');
+      pdf.text(`Menús asignados del ${fechaStr}`, pageWidth / 2, y, { align: 'center' });
+      y += 28;
+      const marginX = 60; // margen adicional a la derecha
+      categorias.forEach(cat => {
+        const recetas = recetasPorCategoria[cat];
+        if (recetas && recetas.length > 0) {
+          pdf.setFontSize(16);
+          pdf.setTextColor(cat === 'Desayuno' ? '#2b7a78' : cat === 'Almuerzo' ? '#f9a826' : '#3a3a7a');
+          pdf.text(cat, marginX, y);
+          y += 18;
+          recetas.forEach(receta => {
+            pdf.setFontSize(13);
+            pdf.setTextColor('#17405c');
+            pdf.text(`• ${receta.nombre}`, marginX + 15, y);
+            y += 16;
+            if (receta.descripcion) {
+              pdf.setFontSize(11);
+              pdf.setTextColor('#555');
+              pdf.text(`  ${receta.descripcion}`, marginX + 20, y);
+              y += 14;
+            }
+            pdf.setFontSize(11);
+            pdf.setTextColor('#555');
+            pdf.text(`  Raciones: ${receta.porciones}`, marginX + 20, y);
+            y += 14;
+            if (receta.insumos && receta.insumos.length > 0) {
+              pdf.setFontSize(11);
+              pdf.setTextColor('#17405c');
+              pdf.text('  Insumos:', marginX + 20, y);
+              y += 13;
+              receta.insumos.forEach(insumo => {
+                pdf.setFontSize(10);
+                pdf.setTextColor('#555');
+                pdf.text(`    - ${insumo.nombreInsumo}: ${insumo.cantidad} ${insumo.unidadMedida || ''}`, marginX + 30, y);
+                y += 12;
+              });
+            }
+            y += 8;
+            if (y > 750) {
+              pdf.addPage();
+              y = 40;
+            }
+          });
+          y += 10;
+        }
+      });
+      pdf.save(`menu-${fechaStr}.pdf`);
+    } catch (err) {
+      alert('Error al generar el PDF', err);
+    }
+    setImprimiendo(false);
   };
 
   return (
@@ -143,7 +270,7 @@ export default function Reports() {
             <FileText size={18} /> Exportar calendario a PDF
           </button>
           <button
-            //onClick={imprimirMenuDelDia}
+            onClick={imprimirMenuDelDia}
             disabled={!fechaParaImprimir || imprimiendo}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow transition-colors ${
               fechaParaImprimir
