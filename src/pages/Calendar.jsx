@@ -17,7 +17,7 @@ export default function Reports() {
 
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [fechaParaImprimir, setFechaParaImprimir] = useState(null);
-  const [imprimiendo] = useState(false);
+  const [imprimiendo, setImprimiendo] = useState(false);
 
   // === Carga por sucursal ===
   const refetch = useCallback(async () => {
