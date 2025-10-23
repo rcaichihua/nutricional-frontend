@@ -48,9 +48,13 @@ export async function getMenusConInsumos(): Promise<Menu[]> {
 }
 
 export async function getMenusConInsumosByDay(
-  fecha: string
+  fecha: string,
+  options?: SucursalOpt 
 ): Promise<MenuRecetasInsumosDTO[]> {
-  return fetchJson(`${API_ENDPOINT}/fecha/${fecha}/recetas-insumos`);
+  return fetchJson(
+    `${API_ENDPOINT}/fecha/${fecha}/recetas-insumos`,
+    withSucursalHeader(undefined, options)
+  );
 }
 
 export async function crearMenu(menu: Menu): Promise<Menu> {

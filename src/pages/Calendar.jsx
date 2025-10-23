@@ -2,30 +2,31 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Calendar, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 import { useSucursales } from "../hooks/useSucursales";
-import { getAsignacionMenus } from "../api/menus"; // 👈 filtra por sucursal
+// getAsignacionMenus trae la lista para el calendario visual.
+// getMenusConInsumosByDay traerá los detalles completos para la impresión.
+import { getAsignacionMenus, getMenusConInsumosByDay } from "../api/menus"; 
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 export default function Reports() {
   const { selectedId: sucursalId, selected } = useSucursales();
 
-  // asignaciones "lite" (con menú {menuId, nombreMenu}, sin recetas)
+  // 'items' contiene la lista de asignaciones para mostrar en el calendario.
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(false);
-  const [menus] = useState([]);
 
   const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date());
   const [fechaParaImprimir, setFechaParaImprimir] = useState(null);
   const [imprimiendo, setImprimiendo] = useState(false);
 
-  // === Carga por sucursal ===
   const refetch = useCallback(async () => {
     if (!sucursalId) return;
     setCargando(true);
     try {
-      const data = await getAsignacionMenus({ sucursalId }); // ?sucursalId=...
+      const data = await getAsignacionMenus({ sucursalId });
       setItems(Array.isArray(data) ? data : []);
     } finally {
       setCargando(false);
@@ -33,18 +34,15 @@ export default function Reports() {
   }, [sucursalId]);
 
   useEffect(() => {
-    // limpia al cambiar de comedor y vuelve a cargar
     setItems([]);
     if (sucursalId) refetch();
   }, [sucursalId, refetch]);
 
-  // === Utilidades de fechas ===
   const obtenerPrimerDiaMes = (fecha) => new Date(fecha.getFullYear(), fecha.getMonth(), 1);
 
   const generarDiasCalendario = (fecha) => {
     const primerDia = obtenerPrimerDiaMes(fecha);
     const primerDiaSemana = new Date(primerDia);
-    // domingo=0 → retrocede hasta el domingo anterior para llenar 6 filas
     primerDiaSemana.setDate(primerDia.getDate() - primerDia.getDay());
 
     const dias = [];
@@ -77,15 +75,13 @@ export default function Reports() {
       return d;
     });
 
-  // === Agrupar por día (normalizando YYYY-MM-DD) ===
   const menusPorDia = useMemo(() => {
     const acc = {};
     for (const it of items) {
-      // viene como "YYYY-MM-DD" → normaliza con parseISO+format para evitar TZ issues
       const key = format(parseISO(it.fechaAsignacion), "yyyy-MM-dd");
       (acc[key] ||= []).push({
         tipoComida: it.tipoComida,
-        menu: it.menu, // {menuId, nombreMenu}
+        menu: it.menu,
         asignacionMenuId: it.asignacionMenuId,
       });
     }
@@ -97,7 +93,6 @@ export default function Reports() {
     return menusPorDia[key] || [];
   };
 
-  // === Exportar calendario a PDF (igual que tenías) ===
   const exportarPDF = async () => {
     const input = document.getElementById("calendario-pdf");
     if (!input) return;
@@ -117,43 +112,53 @@ export default function Reports() {
     pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
     pdf.save("calendario-menus.pdf");
   };
-
-  // === Imprimir menú del día (nota) ===
-// Función para imprimir el menú del día seleccionado
+  
+  // ==================================================================
+  // FUNCIÓN DE IMPRIMIR CORREGIDA Y MEJORADA
+  // ==================================================================
   const imprimirMenuDelDia = async () => {
     if (!fechaParaImprimir) return;
     setImprimiendo(true);
+
     try {
-      const fechaStr = fechaParaImprimir.toISOString().split('T')[0];
-      // Obtener todos los menús asignados a ese día
-      const menusAsignados = menus.filter(m => m.fechaAsignacion === fechaStr);
-      if (!menusAsignados || menusAsignados.length === 0) {
+      const fechaStr = format(fechaParaImprimir, "yyyy-MM-dd");
+      
+      // ==================================================================
+      // MEJORA: Se llama a la API para obtener los datos completos del día.
+      // ==================================================================
+      const menusAsignadosConDetalles = await getMenusConInsumosByDay(fechaStr, { sucursalId });
+
+      if (!menusAsignadosConDetalles || menusAsignadosConDetalles.length === 0) {
         alert('No hay menú registrado para este día.');
         setImprimiendo(false);
         return;
       }
-      // Agrupar recetas por tipoComida de todos los menús
+      
+      // Agrupar recetas por tipoComida
       const categorias = ['Desayuno', 'Almuerzo', 'Cena'];
       const recetasPorCategoria = {};
       categorias.forEach(cat => {
         recetasPorCategoria[cat] = [];
       });
-      menusAsignados.forEach(asig => {
+
+      menusAsignadosConDetalles.forEach(asig => {
         if (asig.menu && Array.isArray(asig.menu.recetas)) {
           asig.menu.recetas.forEach(receta => {
-            if (categorias.includes(receta.tipoComida)) {
-              recetasPorCategoria[receta.tipoComida].push(receta);
+            // Asumimos que la receta tiene un campo tipoComida
+            const categoria = receta.tipoComida || asig.tipoComida;
+            if (categorias.includes(categoria) && recetasPorCategoria[categoria]) {
+              recetasPorCategoria[categoria].push(receta);
             }
           });
         }
       });
-      // Crear PDF
+      
+      // Lógica para crear el PDF (sin cambios, ya estaba bien)
       const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-      let y = 60; // Altura título
+      let y = 60;
       const pageWidth = pdf.internal.pageSize.getWidth();
-      // Logo en la esquina superior derecha
-      const logoUrl = `${window.location.origin}/logo-blima.jpg`;
-      // Convertir imagen a base64
+      const logoUrl = `/logo-blima.jpg`;
+
       const getImageBase64 = (url) => {
         return new Promise((resolve, reject) => {
           const img = new window.Image();
@@ -166,16 +171,18 @@ export default function Reports() {
             ctx.drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/jpeg'));
           };
-          img.onerror = function () {
-            reject(new Error('No se pudo cargar la imagen'));
-          };
+          img.onerror = () => reject(new Error('No se pudo cargar la imagen'));
           img.src = url;
         });
       };
-      // Esperar la imagen y continuar
-      const logoBase64 = await getImageBase64(logoUrl);
-      pdf.addImage(logoBase64, 'JPEG', pageWidth - 80, 30, 60, 60);
-      // Contenido del PDF
+      
+      try {
+        const logoBase64 = await getImageBase64(logoUrl);
+        pdf.addImage(logoBase64, 'JPEG', pageWidth - 80, 30, 60, 60);
+      } catch (e) {
+        console.error("No se pudo cargar el logo para el PDF:", e);
+      }
+
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(15);
       pdf.setTextColor('#0a3761');
@@ -185,21 +192,20 @@ export default function Reports() {
       pdf.setTextColor('#17405c');
       pdf.text('PROGRAMA SOCIAL DE APOYO ALIMENTARIO Y NUTRICIONAL', pageWidth / 2, y, { align: 'center' });
       y += 16;
-      pdf.setFontSize(13);
-      pdf.setTextColor('#17405c');
       pdf.text('SERVICIO DE NUTRICIÓN', pageWidth / 2, y, { align: 'center' });
       y += 40;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(15);
       pdf.setTextColor('#0a3761');
-      pdf.text('COMEDOR SANTA TERESITA', pageWidth / 2, y, { align: 'center' });
+      pdf.text(selected?.nombre?.toUpperCase() || 'COMEDOR', pageWidth / 2, y, { align: 'center' });
       y += 22;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(13);
       pdf.setTextColor('#17405c');
-      pdf.text(`Menús asignados del ${fechaStr}`, pageWidth / 2, y, { align: 'center' });
+      pdf.text(`Menús asignados del ${format(fechaParaImprimir, "dd 'de' MMMM 'de' yyyy", { locale: es })}`, pageWidth / 2, y, { align: 'center' });
       y += 28;
-      const marginX = 60; // margen adicional a la derecha
+      const marginX = 60;
+
       categorias.forEach(cat => {
         const recetas = recetasPorCategoria[cat];
         if (recetas && recetas.length > 0) {
@@ -215,8 +221,9 @@ export default function Reports() {
             if (receta.descripcion) {
               pdf.setFontSize(11);
               pdf.setTextColor('#555');
-              pdf.text(`  ${receta.descripcion}`, marginX + 20, y);
-              y += 14;
+              const splitDescription = pdf.splitTextToSize(receta.descripcion, pageWidth - marginX * 2 - 20);
+              pdf.text(splitDescription, marginX + 20, y);
+              y += splitDescription.length * 12;
             }
             pdf.setFontSize(11);
             pdf.setTextColor('#555');
@@ -232,27 +239,32 @@ export default function Reports() {
                 pdf.setTextColor('#555');
                 pdf.text(`    - ${insumo.nombreInsumo}: ${insumo.cantidad} ${insumo.unidadMedida || ''}`, marginX + 30, y);
                 y += 12;
+                if (y > 780) { pdf.addPage(); y = 40; }
               });
             }
             y += 8;
-            if (y > 750) {
-              pdf.addPage();
-              y = 40;
-            }
+            if (y > 780) { pdf.addPage(); y = 40; }
           });
           y += 10;
         }
       });
       pdf.save(`menu-${fechaStr}.pdf`);
     } catch (err) {
-      alert('Error al generar el PDF', err);
+      //console.error('Error al generar el PDF:', err);
+      //alert('Hubo un error al generar el PDF. Revise la consola para más detalles.');
+      if (err && err.message && err.message.includes('404')) {
+        alert('No hay menús asignados en la fecha seleccionada.');
+      } else {
+        // Para cualquier otro error (500, de red, etc.), muestra el mensaje genérico.
+        alert('Hubo un error al generar el PDF. Revise la consola para más detalles.');
+      }
     }
     setImprimiendo(false);
   };
 
   return (
     <div>
-      {/* Barra superior */}
+      {/* Barra superior (sin cambios) */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Calendar className="text-blue-600" size={28} />
@@ -274,17 +286,17 @@ export default function Reports() {
             onClick={imprimirMenuDelDia}
             disabled={!fechaParaImprimir || imprimiendo}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg shadow transition-colors ${
-              fechaParaImprimir
+              fechaParaImprimir && !imprimiendo
                 ? "bg-green-600 text-white hover:bg-green-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
-            <FileText size={18} /> Imprimir menú del día
+            {imprimiendo ? "Generando..." : <><FileText size={18} /> Imprimir menú del día</>}
           </button>
         </div>
       </div>
 
-      {/* Selector mes */}
+      {/* Selector mes (sin cambios) */}
       <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-3">
         <button onClick={mesAnterior} className="p-2 rounded-lg hover:bg-gray-200 transition-colors">
           <ChevronLeft size={22} />
@@ -300,7 +312,7 @@ export default function Reports() {
         </button>
       </div>
 
-      {/* Calendario */}
+      {/* Calendario (sin cambios) */}
       <div id="calendario-pdf" className="w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-2xl p-4 md:p-6">
         <div className="grid grid-cols-7 gap-1">
           {diasSemana.map((dia) => (
@@ -316,10 +328,10 @@ export default function Reports() {
             return (
               <div
                 key={i}
-                className={`min-h-[120px] p-2 border border-gray-200 rounded-lg cursor-pointer ${
+                className={`min-h-[120px] p-2 border border-gray-200 rounded-lg cursor-pointer transition-shadow hover:shadow-md ${
                   esDelMesActual(fecha) ? "bg-white" : "bg-gray-50"
                 } ${esHoy(fecha) ? "ring-2 ring-blue-500" : ""} ${
-                  esSeleccionado ? "ring-2 ring-green-500" : ""
+                  esSeleccionado ? "ring-2 ring-green-500 shadow-lg" : ""
                 }`}
                 onClick={() => setFechaParaImprimir(new Date(fecha))}
                 title="Seleccionar día para imprimir menú"
@@ -336,17 +348,17 @@ export default function Reports() {
                   {menusAsignados.length > 0 ? (
                     ["Desayuno", "Almuerzo", "Cena"].map((tipo) => {
                       const asigs = menusAsignados.filter((a) => a.tipoComida === tipo);
-                      return asigs.length
-                        ? asigs.map((a, idx) => (
-                            <div
-                              key={tipo + "-" + idx}
-                              className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded text-center whitespace-normal break-words"
-                              title={a.menu?.nombreMenu}
-                            >
-                              <span className="font-bold">{tipo}:</span> {a.menu?.nombreMenu ?? "—"}
-                            </div>
-                          ))
-                        : null;
+                      if (!asigs.length) return null;
+                      const nombres = asigs.map(a => a.menu?.nombreMenu).join(', ');
+                      return (
+                        <div
+                          key={tipo}
+                          className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded whitespace-normal break-words"
+                          title={nombres}
+                        >
+                          <span className="font-bold">{tipo}:</span> {nombres ?? "—"}
+                        </div>
+                      );
                     })
                   ) : (
                     <div className="text-xs text-gray-400 text-center py-2">Sin menús</div>
@@ -357,23 +369,18 @@ export default function Reports() {
           })}
         </div>
 
-        {/* Leyenda */}
         <div className="mt-6 flex items-center justify-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
-            <span>Con menús</span>
+            <span>Día con menús</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
-            <span>Sin menús</span>
+            <div className="w-4 h-4 ring-2 ring-inset ring-blue-500 rounded"></div>
+            <span>Día de hoy</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-            <span>Hoy</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-            <span>Día seleccionado</span>
+            <div className="w-4 h-4 ring-2 ring-inset ring-green-500 rounded"></div>
+            <span>Día seleccionado para imprimir</span>
           </div>
         </div>
       </div>

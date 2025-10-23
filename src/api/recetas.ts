@@ -56,3 +56,6 @@ export async function eliminarReceta(recetaId: number): Promise<void> {
   });
 }
 
+export async function getAllRecetasConInsumos(): Promise<any[]> {
+  return fetchJson(`${API_ENDPOINT}/all-with-insumos`);
+}
