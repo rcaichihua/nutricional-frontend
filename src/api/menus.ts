@@ -1,12 +1,14 @@
-// src/api/menus.ts
 import { Menu, MenuRecetasInsumosDTO } from "../types/Menu";
 import { fetchJson } from "./fetchUtils";
 
 const API_ENDPOINT = `/menus`;
 
+const REPORTE_ENDPOINT = `/reporte`;
+
+const OBSERVACIONES_ENDPOINT = `/observaciones`;
+
 type SucursalOpt = { sucursalId?: number | string };
 
-/** Obtiene el id de sucursal desde localStorage (plano o dentro de "auth") */
 function getStoredSucursalId(): number | null {
   const raw = localStorage.getItem("sucursalId");
   if (raw != null) return Number(raw);
@@ -23,7 +25,6 @@ function getStoredSucursalId(): number | null {
   return null;
 }
 
-/** Mezcla headers y agrega el header de sucursal (de options o de localStorage) */
 function withSucursalHeader(
   init: RequestInit | undefined,
   options?: SucursalOpt
@@ -38,7 +39,6 @@ function withSucursalHeader(
   return { ...init, headers };
 }
 
-/* ===================== Menús (sin filtro de sucursal) ===================== */
 export async function getMenus(): Promise<Menu[]> {
   return fetchJson(API_ENDPOINT);
 }
@@ -81,9 +81,6 @@ export async function getMenuValoresNutricionalesById(
   return fetchJson(`${API_ENDPOINT}/${id}/consolidado-nutricional`);
 }
 
-/* ===================== Asignaciones (con sucursal) ===================== */
-
-/** Crea asignaciones para una fecha/tipoComida usando la sucursal guardada */
 export async function crearAsignacionMenu(
   dto: any,
   options?: SucursalOpt
@@ -100,18 +97,16 @@ export async function crearAsignacionMenu(
   );
 }
 
-/** Lista asignaciones para la sucursal guardada */
 export async function getAsignacionMenus(
   options?: SucursalOpt
 ): Promise<any[]> {
   let url = `${API_ENDPOINT}/asignaciones`;
 
-  // El backend espera ?sucursalId=...
   const qp: string[] = [];
   if (options?.sucursalId != null) {
     qp.push(`sucursalId=${encodeURIComponent(String(options.sucursalId))}`);
   }
-  // cache-buster para evitar resultados cacheados
+
   qp.push(`_=${Date.now()}`);
 
   if (qp.length) url += `?${qp.join("&")}`;
@@ -119,7 +114,6 @@ export async function getAsignacionMenus(
   return fetchJson(url);
 }
 
-/** Elimina una asignación específica en la sucursal (header por consistencia) */
 export async function eliminarAsignacionMenu(
   asignacionMenuId: number,
   options?: SucursalOpt
@@ -135,13 +129,66 @@ export async function eliminarAsignacionMenu(
   );
 }
 
-/** Consulta asignaciones por día en la sucursal guardada */
 export async function getAsignacionMenusByDay(
   fecha: string,
   options?: SucursalOpt
 ): Promise<MenuRecetasInsumosDTO[]> {
   return fetchJson(
     `${API_ENDPOINT}/fecha/${fecha}/asignacion`,
+    withSucursalHeader(undefined, options)
+  );
+}
+
+export async function getReporteNutricionalDia(
+  fecha: string,
+  sucursalId: number | string,
+  comensales: number
+): Promise<any> {
+  const params = new URLSearchParams({
+    fecha,
+    sucursalId: String(sucursalId),
+    comensales: String(comensales),
+  });
+
+  return fetchJson(
+    `${REPORTE_ENDPOINT}/dia-nutricional?${params.toString()}`,
+    withSucursalHeader(undefined, { sucursalId })
+  );
+}
+
+export async function guardarObservacion(
+  dto: { fecha: string; observacion: string },
+  options?: SucursalOpt
+): Promise<any> {
+  return fetchJson(
+    OBSERVACIONES_ENDPOINT,
+    withSucursalHeader(
+      {
+        method: "POST",
+        body: JSON.stringify(dto),
+      },
+      options
+    )
+  );
+}
+
+export async function getObservacionDia(
+  fecha: string,
+  options?: SucursalOpt
+): Promise<any> {
+  return fetchJson(
+    `${OBSERVACIONES_ENDPOINT}/dia?fecha=${fecha}`,
+    withSucursalHeader(undefined, options)
+  );
+}
+
+export async function getObservacionesRango(
+  inicio: string,
+  fin: string,
+  options?: SucursalOpt
+): Promise<any[]> {
+  return fetchJson(
+    `${OBSERVACIONES_ENDPOINT}/rango?inicio=${inicio}&fin=${fin}`,
     withSucursalHeader(undefined, options)
   );
 }

@@ -1,4 +1,3 @@
-// src/pages/MenuPlanner.jsx
 import SucursalSelect from "../components/SucursalSelect";
 import { useSucursales } from "../hooks/useSucursales";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -9,13 +8,19 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarClock,
-  RefreshCw,
+  BarChart3,
+  Save,
+  Loader2,
+  StickyNote,
 } from "lucide-react";
-import { format, getWeek, isSameWeek } from "date-fns";
+import { format, getWeek, isSameWeek, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { getMenus } from "../api/menus";
+// CORRECCIÓN 1: Quitamos 'crearAsignacionMenu' de aquí porque usaremos la del hook
+import { getMenus, getReporteNutricionalDia, guardarObservacion, getObservacionesRango } from "../api/menus";
 import SelectMenuModal from "../components/SelectMenuModal";
 import { useAsignacionMenu } from "../hooks/useAsignacionMenu";
+import ReporteNutricionalDiaModal from "../components/ReporteNutricionalDiaModal";
+import ObservacionModal from "../components/ObservacionModal";
 
 const DIAS_SEMANA = [
   "Lunes",
@@ -33,14 +38,19 @@ const COMIDAS = [
   { tipo: "Cena", color: "text-blue-700" },
 ];
 
+// Helper para crear el estado por defecto de los comensales
+const defaultComensales = () =>
+  DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 0 }), {});
+
 export default function MenuPlanner() {
   const { selectedId: sucursalId, selected } = useSucursales();
   const {
     asignacionMenu,
-    createAsignacionMenu,
+    // CORRECCIÓN 2: Descomentamos esta línea para usar la función del hook
+    createAsignacionMenu, 
     deleteAsignacionMenu,
     fetchAsignacionMenus,
-    loading,
+    loading: loadingAsignaciones,
   } = useAsignacionMenu();
 
   const [menusPorDiaComida, setMenusPorDiaComida] = useState({});
@@ -54,27 +64,31 @@ export default function MenuPlanner() {
     return lunes;
   });
 
-  const handleGoToCurrentWeek = () => {
-    const hoy = new Date();
-    const lunes = new Date(hoy);
-    const diaSemana = hoy.getDay();
-    const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
-    lunes.setDate(hoy.getDate() - diasHastaLunes);
-    setSemanaSeleccionada(lunes);
-  };
-
-  const [comensales, setComensales] = useState(
-    DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 0 }), {})
-  );
-
+  const [comensales, setComensales] = useState(defaultComensales);
+  
+  // Estado para las observaciones
+  const [observaciones, setObservaciones] = useState({}); 
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInfo, setModalInfo] = useState({ dia: "", comida: "" });
-
   const [menus, setMenus] = useState([]);
-const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
-const [mostrarLoader, setMostrarLoader] = useState(false);
-const isLoading = cargandoCatalogo || loading;
+  const [cargandoCatalogo, setCargandoCatalogo] = useState(true);
+  const [mostrarLoader, setMostrarLoader] = useState(false);
+  const isLoading = cargandoCatalogo || loadingAsignaciones;
 
+  const [reporteModalOpen, setReporteModalOpen] = useState(false);
+  const [reporteData, setReporteData] = useState(null);
+  const [loadingReporte, setLoadingReporte] = useState(false);
+  const [errorReporte, setErrorReporte] = useState(null);
+  const [reporteInfo, setReporteInfo] = useState({ fecha: "", comensales: 0, sucursalNombre: "" });
+
+  // Estado para el modal de observación
+  const [obsModalOpen, setObsModalOpen] = useState(false);
+  const [obsModalInfo, setObsModalInfo] = useState({ fechaISO: "", fechaLegible: "", texto: "" });
+
+  const [savingComensales, setSavingComensales] = useState(null);
+
+  // --- Funciones de Fechas ---
   const obtenerFechasSemana = (fechaInicio) => {
     const fechas = [];
     for (let i = 0; i < 7; i++) {
@@ -103,80 +117,9 @@ const isLoading = cargandoCatalogo || loading;
     [fechasSemana, formatearFechaISO]
   );
 
-  // reinicia al cambiar de comedor y vuelve a cargar sus asignaciones
-  useEffect(() => {
-  // limpia contenedores dependientes del comedor anterior
-  setMenusPorDiaComida({});
-  setComensales(defaultComensales());
+  // --- EFECTOS ---
 
-  if (sucursalId) {
-    fetchAsignacionMenus({ sucursalId });
-  }
-}, [sucursalId, fetchAsignacionMenus]);
-
-// carga de menús (catálogo) una sola vez
-  useEffect(() => {
-    getMenus().then(setMenus).catch(console.error);
-  }, []);
-
-
-  // Loader UX
-  /*useEffect(() => {
-    let t;
-    if (cargandoMenus) {
-      t = setTimeout(() => setMostrarLoader(true), 300);
-    } else {
-      setMostrarLoader(false);
-    }
-    return () => clearTimeout(t);
-  }, [cargandoMenus]);*/
-
-  // Agrupa SOLO la semana visible
-  useEffect(() => {
-    const agrupados = {};
-    (asignacionMenu || [])
-      .filter((a) => fechasSemanaSet.has(a.fechaAsignacion))
-      .forEach((asig) => {
-        const fecha = asig.fechaAsignacion;
-        const tipo = asig.tipoComida;
-        if (!agrupados[fecha]) agrupados[fecha] = {};
-        if (!agrupados[fecha][tipo]) agrupados[fecha][tipo] = [];
-        agrupados[fecha][tipo].push(asig);
-      });
-    setMenusPorDiaComida(agrupados);
-  }, [asignacionMenu, fechasSemanaSet]);
-
-  useEffect(() => {
-  // Mapea fecha ISO -> nombre del día
-  const fechaIsoToDia = new Map(
-    fechasSemana.map((f, idx) => [formatearFechaISO(f), DIAS_SEMANA[idx]])
-  );
-
-  // Construye un objeto { "Lunes": 700, ... } a partir de las asignaciones de la semana visible
-  const comxDia = {};
-
-  (asignacionMenu || [])
-    .filter(a => fechaIsoToDia.has(a.fechaAsignacion)) // solo la semana visible
-    .forEach(a => {
-      const dia = fechaIsoToDia.get(a.fechaAsignacion);
-      // Regla: toma el primer comensales encontrado (o el mayor si prefieres)
-      if (comxDia[dia] == null) {
-        comxDia[dia] = a.comensales ?? 0;
-      } else {
-        // si prefieres quedarte con el mayor:
-        // comxDia[dia] = Math.max(comxDia[dia], a.comensales ?? 0);
-      }
-    });
-  // Aplica sobre el estado manteniendo el valor anterior en días sin asignación
-  setComensales(prev => {
-    const next = { ...prev };
-    DIAS_SEMANA.forEach(dia => {
-      if (comxDia[dia] != null) next[dia] = comxDia[dia];
-    });
-    return next;
-  });
-}, [asignacionMenu, fechasSemana, formatearFechaISO]);
-
+  // 1. Cargar catálogo
   useEffect(() => {
     let active = true;
     setCargandoCatalogo(true);
@@ -187,28 +130,84 @@ const isLoading = cargandoCatalogo || loading;
     return () => { active = false; };
   }, []);
 
+  // 2. Cargar datos al cambiar sucursal o semana
   useEffect(() => {
     setMenusPorDiaComida({});
     setComensales(defaultComensales());
+    setObservaciones({}); // Limpiar observaciones al cambiar
+
     if (sucursalId) {
-      fetchAsignacionMenus({ sucursalId }); // el hook pone/quita su propio loading
+      fetchAsignacionMenus({ sucursalId });
+      
+      // Cargar observaciones de la semana actual
+      const fechaInicio = formatearFechaISO(fechasSemana[0]);
+      const fechaFin = formatearFechaISO(fechasSemana[6]);
+      
+      getObservacionesRango(fechaInicio, fechaFin, { sucursalId })
+        .then(data => {
+          const obsMap = {};
+          if (Array.isArray(data)) {
+            data.forEach(o => obsMap[o.fecha] = o.observacion);
+          }
+          setObservaciones(obsMap);
+        })
+        .catch(console.error);
     }
-  }, [sucursalId, fetchAsignacionMenus]);
+  }, [sucursalId, fetchAsignacionMenus, fechasSemana, formatearFechaISO]);
+
+  // 3. Procesar asignaciones
+  useEffect(() => {
+    const agrupados = {};
+    const comensalesDeLaSemana = defaultComensales(); // 1. Inicia reseteado
+    const fechaIsoToDia = new Map(
+      fechasSemana.map((f, idx) => [formatearFechaISO(f), DIAS_SEMANA[idx]])
+    );
+
+    (asignacionMenu || [])
+      .filter((a) => fechasSemanaSet.has(a.fechaAsignacion))
+      .forEach((asig) => {
+        const fecha = asig.fechaAsignacion;
+        const tipo = asig.tipoComida;
+
+        if (!agrupados[fecha]) agrupados[fecha] = {};
+        if (!agrupados[fecha][tipo]) agrupados[fecha][tipo] = [];
+        agrupados[fecha][tipo].push(asig);
+
+        const dia = fechaIsoToDia.get(asig.fechaAsignacion); 
+        if (dia) {
+          if (asig.tipoComida === "Almuerzo") {
+            comensalesDeLaSemana[dia] = asig.comensales ?? 0;
+          } else if (comensalesDeLaSemana[dia] === 0) {
+            comensalesDeLaSemana[dia] = asig.comensales ?? 0;
+          }
+        }
+      });
+    
+    setMenusPorDiaComida(agrupados);
+    setComensales(comensalesDeLaSemana);
+
+  }, [asignacionMenu, fechasSemana, fechasSemanaSet, formatearFechaISO]);
 
   useEffect(() => {
-  let t;
-  if (isLoading) {
-    t = setTimeout(() => setMostrarLoader(true), 300);
-  } else {
-    setMostrarLoader(false);
-  }
-  return () => clearTimeout(t);
-}, [isLoading]);
+    let t;
+    if (isLoading) {
+      t = setTimeout(() => setMostrarLoader(true), 300);
+    } else {
+      setMostrarLoader(false);
+    }
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
-  // También refresca al cambiar sucursal (extra, por si ya estaba cargado)
-  //useEffect(() => {
-  //  if (sucursalId) fetchAsignacionMenus({ sucursalId });
-  //}, [sucursalId, fetchAsignacionMenus]);
+  // --- Handlers ---
+
+  const handleGoToCurrentWeek = () => {
+    const hoy = new Date();
+    const lunes = new Date(hoy);
+    const diaSemana = hoy.getDay();
+    const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+    lunes.setDate(hoy.getDate() - diasHastaLunes);
+    setSemanaSeleccionada(lunes);
+  };
 
   const formattedWeekTitle = useMemo(() => {
     const weekStart = fechasSemana[0];
@@ -253,34 +252,108 @@ const isLoading = cargandoCatalogo || loading;
     [deleteAsignacionMenu, sucursalId]
   );
 
-  const defaultComensales = () =>
-  DIAS_SEMANA.reduce((acc, dia) => ({ ...acc, [dia]: 0 }), {});
+  const handleVerReporteDia = useCallback(async (dia, fechaISO, numComensales) => {
+    if (!sucursalId) return;
+    
+    setReporteInfo({ 
+      fecha: format(parseISO(fechaISO), "dd 'de' MMMM, yyyy", { locale: es }), 
+      comensales: numComensales,
+      sucursalNombre: selected?.nombre || "N/A"
+    });
+    setLoadingReporte(true);
+    setErrorReporte(null);
+    setReporteData(null);
+    setReporteModalOpen(true);
 
-  /*const handleRefetch = useCallback(async () => {
-    if (!sucursalId) {
-      alert("Selecciona un comedor primero.");
-      return;
-    }
     try {
-      setCargandoMenus(true);
-      //const data = 
-      await fetchAsignacionMenus({ sucursalId }); // 👈 await
-      // Opcional: debug para confirmar fechas normalizadas
-      // console.log("Refetch fechas:", data.map(d => d.fechaAsignacion));
-      setCargandoMenus(false);
+      const data = await getReporteNutricionalDia(fechaISO, sucursalId, numComensales);
+      setReporteData(data);
     } catch (e) {
-      console.error("Error al refrescar asignaciones:", e);
+      if (e.code === 'HTTP_404') {
+        setErrorReporte("No se encontraron menús asignados para este día.");
+      } else {
+        setErrorReporte("Error al calcular el reporte. Intente más tarde.");
+      }
+      console.error("Error al cargar reporte:", e);
     } finally {
-      setCargandoMenus(false);
+      setLoadingReporte(false);
     }
-  }, [sucursalId, fetchAsignacionMenus]);*/
+  }, [sucursalId, selected]);
+
+  const handleSaveComensales = useCallback(async (dia, fechaISO) => {
+    if (!sucursalId) {
+        alert("Por favor, seleccione un comedor.");
+        return;
+    }
+    
+    const asignadosAlmuerzo = menusPorDiaComida[fechaISO]?.['Almuerzo'] || [];
+    if (asignadosAlmuerzo.length === 0) {
+        alert("Debe asignar al menos un menú de almuerzo para guardar la cantidad de usuarios.");
+        return;
+    }
+
+    setSavingComensales(dia);
+
+    try {
+        const numComensales = comensales[dia] ?? 0;
+        const menuIds = asignadosAlmuerzo.map(asig => asig.menu?.menuId).filter(Boolean);
+
+        const dto = {
+            fechaAsignacion: fechaISO,
+            tipoComida: 'Almuerzo',
+            menuIds: menuIds,
+            comensales: numComensales,
+        };
+
+        // CORRECCIÓN 3: Ahora 'createAsignacionMenu' existe porque lo extrajimos del hook
+        const ok = await createAsignacionMenu(
+            dto,
+            () => alert("Cantidad de usuarios guardada exitosamente."), 
+            { sucursalId }
+        );
+
+        if (!ok) {
+            alert("Error al guardar la cantidad de usuarios.");
+        }
+    } catch (e) {
+        console.error("Error en handleSaveComensales:", e);
+        alert("Ocurrió un error inesperado al guardar.");
+    } finally {
+        setSavingComensales(null);
+    }
+  }, [sucursalId, comensales, menusPorDiaComida, createAsignacionMenu]); 
+
+  // --- Funciones para Observaciones ---
+  
+  const handleAbrirObservacion = (fechaISO) => {
+    setObsModalInfo({
+        fechaISO,
+        fechaLegible: format(parseISO(fechaISO), "dd 'de' MMMM", { locale: es }),
+        texto: observaciones[fechaISO] || ""
+    });
+    setObsModalOpen(true);
+  };
+
+  const handleGuardarObservacion = async (texto) => {
+    if (!sucursalId) return;
+    try {
+        await guardarObservacion({
+            fecha: obsModalInfo.fechaISO,
+            observacion: texto
+        }, { sucursalId });
+        
+        setObservaciones(prev => ({ ...prev, [obsModalInfo.fechaISO]: texto }));
+    } catch (e) {
+        console.error("Error al guardar observación:", e);
+        alert("Error al guardar la observación");
+    }
+  };
 
   return (
     <section key={sucursalId ?? 'no-sucursal'}>
-      {/* CABECERA RESPONSIVE */}
+      {/* ... (Header y resto del renderizado igual) ... */}
       <div className="bg-white rounded-2xl shadow-md p-4 md:p-6 mb-6">
         <div className="flex flex-col gap-4">
-          {/* Fila 1: navegación de semana */}
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={semanaAnterior}
@@ -289,7 +362,6 @@ const isLoading = cargandoCatalogo || loading;
             >
               <ChevronLeft size={22} />
             </button>
-
             <div className="flex items-center gap-2">
               {!isCurrentWeek && (
                 <button
@@ -303,7 +375,6 @@ const isLoading = cargandoCatalogo || loading;
                 {formattedWeekTitle}
               </h2>
             </div>
-
             <button
               onClick={semanaSiguiente}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -312,8 +383,6 @@ const isLoading = cargandoCatalogo || loading;
               <ChevronRight size={22} />
             </button>
           </div>
-
-          {/* Fila 2: selector de sucursal + actualizar (wrap en mobile) */}
           <div className="flex flex-wrap items-center gap-3 justify-end">
             {selected && (
               <span className="text-sm text-gray-600">
@@ -325,7 +394,6 @@ const isLoading = cargandoCatalogo || loading;
         </div>
       </div>
 
-      {/* CUERPO */}
       <div className="relative">
         {mostrarLoader && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 z-10">
@@ -339,35 +407,72 @@ const isLoading = cargandoCatalogo || loading;
             {DIAS_SEMANA.map((dia, index) => {
               const fechaISO = formatearFechaISO(fechasSemana[index]);
               const asignadosPorComida = menusPorDiaComida[fechaISO] || {};
+              const tieneMenuAsignado = Object.values(asignadosPorComida).flat().length > 0;
+              const tieneMenuAlmuerzo = (asignadosPorComida['Almuerzo'] || []).length > 0;
+              
+              // Verificamos si hay observación para este día
+              const tieneObservacion = !!observaciones[fechaISO];
+
               return (
                 <div
                   key={dia}
                   className="bg-white rounded-2xl shadow-md p-4 md:p-6 flex flex-col gap-4"
                 >
-                  {/* Encabezado del día */}
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg md:text-xl font-extrabold">{dia}</span>
-                      <span className="text-xs md:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
-                        {formatearFecha(fechasSemana[index])}
-                      </span>
-                      {Object.values(asignadosPorComida).flat().length > 0 ? (
-                        <span className="text-[11px] md:text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
-                          Con menú asignado
-                        </span>
-                      ) : (
-                        <span className="text-[11px] md:text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg font-medium">
-                          Sin menú
-                        </span>
-                      )}
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3">
+                            <span className="text-lg md:text-xl font-extrabold">{dia}</span>
+                            <span className="text-xs md:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                                {formatearFecha(fechasSemana[index])}
+                            </span>
+                            {tieneMenuAsignado ? (
+                                <span className="text-[11px] md:text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
+                                Con menú asignado
+                                </span>
+                            ) : (
+                                <span className="text-[11px] md:text-xs bg-red-100 text-red-700 px-2 py-1 rounded-lg font-medium">
+                                Sin menú
+                                </span>
+                            )}
+                        </div>
+                        {/* VISUALIZACIÓN DE LA OBSERVACIÓN */}
+                        {tieneObservacion && (
+                            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded mt-1 max-w-md break-words shadow-sm">
+                                <span className="font-bold mr-1">📝 Nota:</span> {observaciones[fechaISO]}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {/* NUEVO BOTÓN DE OBSERVACIÓN */}
+                      <button
+                        onClick={() => handleAbrirObservacion(fechaISO)}
+                        disabled={!sucursalId}
+                        className={`p-2 rounded-lg transition-colors ${tieneObservacion ? 'text-amber-600 bg-amber-100 hover:bg-amber-200' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}
+                        title={tieneObservacion ? "Editar observación" : "Agregar observación"}
+                      >
+                        <StickyNote size={18} />
+                      </button>
+
+                      <button
+                        onClick={() => handleVerReporteDia(dia, fechaISO, comensales[dia])}
+                        disabled={!tieneMenuAsignado || comensales[dia] === 0 || !sucursalId}
+                        className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={
+                          !tieneMenuAsignado ? "No hay menús asignados este día" : 
+                          comensales[dia] === 0 ? "Ingrese el número de comensales" : 
+                          "Ver Reporte Nutricional Consolidado del Día"
+                        }
+                      >
+                        <BarChart3 size={16} />
+                        Reporte
+                      </button>
+                      
                       <User2 className="text-gray-500" />
                       <span className="text-gray-600 font-medium text-sm">Usuarios Almuerzo:</span>
                       <input
                         type="number"
-                        min={1}
+                        min={0}
                         value={comensales[dia]}
                         onChange={(e) =>
                           setComensales((prev) => ({
@@ -377,15 +482,29 @@ const isLoading = cargandoCatalogo || loading;
                         }
                         className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-300 font-bold"
                       />
+                      <button
+                        onClick={() => handleSaveComensales(dia, fechaISO)}
+                        disabled={savingComensales === dia || !sucursalId || !tieneMenuAlmuerzo} 
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={
+                          !sucursalId ? "Seleccione un comedor" :
+                          !tieneMenuAlmuerzo ? "Debe asignar un menú de almuerzo primero" :
+                          "Guardar cantidad de usuarios para este día"
+                        }
+                      >
+                        {savingComensales === dia ? (
+                          <Loader2 className="animate-spin" size={18} />
+                        ) : (
+                          <Save size={18} />
+                        )}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Comidas responsive: 1 col en móvil, 3 cols en md+ */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {COMIDAS.map(({ tipo, color }) => (
                       <div key={tipo} className="flex flex-col gap-2">
                         <span className={`font-semibold ${color}`}>{tipo}</span>
-
                         <div className="space-y-2">
                           {(asignadosPorComida[tipo] || []).map((asignacion) => (
                             <div
@@ -407,7 +526,6 @@ const isLoading = cargandoCatalogo || loading;
                             </div>
                           ))}
                         </div>
-
                         <button
                           className="mt-2 w-full border-2 border-dashed border-gray-300 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
                           onClick={() => handleAbrirModal(dia, tipo)}
@@ -426,7 +544,6 @@ const isLoading = cargandoCatalogo || loading;
         </div>
       </div>
 
-      {/* Modal */}
       {modalOpen && (
         <SelectMenuModal
           open={modalOpen}
@@ -449,13 +566,17 @@ const isLoading = cargandoCatalogo || loading;
               idx >= 0 ? formatearFechaISO(fechasSemana[idx]) : "";
             const tipoComida = modalInfo.comida;
             const menuIds = seleccionados.map((m) => m.menuId);
+            
+            const comensalesParaGuardar = tipoComida === 'Almuerzo' ? (comensales[modalInfo.dia] ?? 0) : 0;
+
             const dto = {
               fechaAsignacion,
               tipoComida,
               menuIds,
-              comensales: comensales[modalInfo.dia] ?? 0,
+              comensales: comensalesParaGuardar,
             };
 
+            // CORRECCIÓN 4: Usamos la función del hook
             const ok = await createAsignacionMenu(
               dto,
               () => alert("Asignación guardada exitosamente"),
@@ -465,6 +586,25 @@ const isLoading = cargandoCatalogo || loading;
           }}
         />
       )}
+
+      <ReporteNutricionalDiaModal
+        open={reporteModalOpen}
+        onClose={() => setReporteModalOpen(false)}
+        data={reporteData}
+        isLoading={loadingReporte}
+        error={errorReporte}
+        fecha={reporteInfo.fecha}
+        comensales={reporteInfo.comensales}
+        sucursalNombre={reporteInfo.sucursalNombre}
+      />
+      
+      <ObservacionModal
+        open={obsModalOpen}
+        onClose={() => setObsModalOpen(false)}
+        fecha={obsModalInfo.fechaLegible}
+        observacionInicial={obsModalInfo.texto}
+        onSave={handleGuardarObservacion}
+      />
     </section>
   );
 }
