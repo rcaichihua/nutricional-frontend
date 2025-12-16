@@ -30,9 +30,21 @@ export function useInsumos() {
     if (!insumo.nombre?.trim()) {
       errors.push("Debes poner el nombre del insumo");
     }
-    if (!insumo.grupo?.trim()) {
+
+    // --- CORRECCIÓN DE VALIDACIÓN DE GRUPO ---
+    // Verificamos si grupo existe.
+    // Si es string, usamos trim().
+    // Si es objeto o número (ID), verificamos que no sea nulo/undefined.
+    const grupoValido = typeof insumo.grupo === 'string' 
+      ? insumo.grupo.trim().length > 0 
+      : (insumo.grupo !== null && insumo.grupo !== undefined);
+
+    console.log('Hola -- ' + insumo.grupo);
+
+    if (!grupoValido) {
       errors.push("Selecciona el grupo");
     }
+    
     if (!insumo.subgrupo?.trim()) {
       errors.push("Debes poner el subgrupo del insumo");
     }

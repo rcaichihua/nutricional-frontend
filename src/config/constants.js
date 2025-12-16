@@ -20,7 +20,7 @@ export const APP_CONFIG = {
 };
 
 // Subgrupos de insumos
-export const SUBGRUPOS = {
+export const SUBGRUPOS = {    
   AZUCARES_Y_PRODUCTOS_DULCES: 'AZUCARES Y PRODUCTOS DULCES',
   BEBIDAS: 'BEBIDAS',
   CARNERO: 'CARNERO',

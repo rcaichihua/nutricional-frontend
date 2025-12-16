@@ -263,13 +263,12 @@ export default function Reports() {
           recetas.forEach(receta => {
             pdf.setFontSize(11);
             pdf.setTextColor('#17405c');
-            pdf.text(`• ${receta.nombre} (Para ${comensales} Raciones)`, marginX + 15, y);
+            pdf.text(`• ${receta.nombre}`, marginX + 15, y);
             y += 16;
             
             if (receta.insumos && receta.insumos.length > 0) {
               pdf.setFontSize(10);
               pdf.setTextColor('#17405c');
-              pdf.text('Insumos:', marginX + 20, y);
               y += 12;
               
               receta.insumos.forEach(insumo => {
