@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Calendar, FileText } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { ChevronLeft, ChevronRight, Calendar, FileText, List } from "lucide-react"; 
+import { format, parseISO, startOfWeek, addDays } from "date-fns"; 
 import { es } from "date-fns/locale";
 
 import { useSucursales } from "../hooks/useSucursales";
-// Importamos getAsignacionMenus, getMenusConInsumosByDay Y LA NUEVA getObservacionDia
 import { getAsignacionMenus, getMenusConInsumosByDay, getObservacionDia } from "../api/menus"; 
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -112,7 +111,6 @@ export default function Reports() {
     return menusPorDia[key] || [];
   };
   const exportarPDF = async () => {
-    // ... (función de exportar PDF sin cambios) ...
     const input = document.getElementById("calendario-pdf");
     if (!input) return;
     const canvas = await html2canvas(input, { scale: 3, useCORS: true });
@@ -133,7 +131,7 @@ export default function Reports() {
   };
   
   // ==================================================================
-  // FUNCIÓN DE IMPRIMIR CON OBSERVACIONES INTEGRADAS
+  // IMPRIMIR MENÚ DEL DÍA (Lista de Compras)
   // ==================================================================
   const imprimirMenuDelDia = async () => {
     if (!fechaParaImprimir) return;
@@ -143,20 +141,15 @@ export default function Reports() {
       const fechaStr = format(fechaParaImprimir, "yyyy-MM-dd");
       const fechaLegible = format(fechaParaImprimir, "dd 'de' MMMM, yyyy", { locale: es });
 
-      // 1. Obtener menús
       const menusAsignadosConDetalles = await getMenusConInsumosByDay(fechaStr, { sucursalId });
 
-      // 2. Obtener observación del día (NUEVO)
       let observacionTexto = "";
       try {
         const obsData = await getObservacionDia(fechaStr, { sucursalId });
         if (obsData && obsData.observacion) {
             observacionTexto = obsData.observacion;
         }
-      } catch (error) {
-        console.warn("No se pudo obtener la observación o no existe", error);
-        // No bloqueamos el reporte si falla la observación, solo la dejamos vacía
-      }
+      } catch (error) { console.warn(error); }
 
       if (!menusAsignadosConDetalles || menusAsignadosConDetalles.length === 0) {
         alert('No hay menú registrado para este día.');
@@ -190,7 +183,6 @@ export default function Reports() {
         }
       });
       
-      // --- DISEÑO DEL PDF ---
       const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const logoUrl = `/logo-blima.jpg`;
@@ -212,46 +204,39 @@ export default function Reports() {
         });
       };
       
-      // --- ENCABEZADO ---
       let y = 40;
-      
       try {
         const logoBase64 = await getImageBase64(logoUrl);
         pdf.addImage(logoBase64, 'JPEG', 40, 30, 50, 50);
-      } catch (e) {
-        console.error("No se pudo cargar el logo para el PDF:", e);
-      }
+      } catch (e) { console.error(e); }
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(14);
       pdf.setTextColor('#0a3761');
       pdf.text('SOCIEDAD DE BENEFICENCIA DE LIMA METROPOLITANA', pageWidth / 2, y, { align: 'center' });
-      y += 16;
-      
+      y += 14;
       pdf.setFontSize(11);
       pdf.setTextColor('#17405c');
       pdf.text('PROGRAMA SOCIAL DE APOYO ALIMENTARIO Y NUTRICIONAL', pageWidth / 2, y, { align: 'center' });
-      y += 14;
+      y += 12;
       pdf.text('SERVICIO DE NUTRICIÓN', pageWidth / 2, y, { align: 'center' });
-      y += 30;
+      y += 25;
 
       const nombreComedor = selected?.nombre?.toUpperCase() || 'COMEDOR';
-      
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(12);
       pdf.setTextColor('#0a3761');
       pdf.text(`${nombreComedor}  -  ${fechaLegible}`, pageWidth / 2, y, { align: 'center' });
-      y += 16;
+      y += 14;
 
       pdf.setFontSize(11);
       pdf.setTextColor('#333');
       pdf.text(`Total de raciones: ${comensales}`, pageWidth / 2, y, { align: 'center' });
-      y += 28;
+      y += 20;
       
       const marginX = 60;
-      const maxInsumoWidth = pageWidth - (marginX + 30) - 150; 
+      const maxInsumoWidth = pageWidth - (marginX * 2) - 20; 
 
-      // --- CONTENIDO (RECETAS E INSUMOS) ---
       categorias.forEach(cat => {
         const recetas = recetasPorCategoria[cat];
         if (recetas && recetas.length > 0) {
@@ -275,50 +260,37 @@ export default function Reports() {
                 const cantidadPorRacion = insumo.cantidad || 0;
                 const cantidadTotal = cantidadPorRacion * comensales;
                 const { total, unidad } = convertirUnidad(cantidadTotal, insumo.unidadMedida);
-
                 const textoInsumo = `- ${insumo.nombreInsumo}: ${formatNumber(total)} ${unidad}`;
-                
                 pdf.setFontSize(9);
                 pdf.setTextColor('#555');
                 
                 const insumoLines = pdf.splitTextToSize(textoInsumo, maxInsumoWidth);
                 pdf.text(insumoLines, marginX + 30, y);
-                
                 y += (insumoLines.length * 11);
                 
                 if (y > 780) { pdf.addPage(); y = 40; }
               });
             }
-            y += 8;
+            y += 6;
             if (y > 780) { pdf.addPage(); y = 40; }
           });
-          y += 10;
+          y += 8;
         }
       });
       
-      // --- SECCIÓN DE OBSERVACIONES (NUEVO) ---
       if (observacionTexto) {
-        y += 15; // Espacio antes de las observaciones
-        
-        // Verificar si necesitamos nueva página
+        y += 15; 
         if (y > 750) { pdf.addPage(); y = 40; }
-
-        // Título de la sección
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(12);
-        pdf.setTextColor('#d97706'); // Color ámbar/naranja para resaltar
+        pdf.setTextColor('#d97706'); 
         pdf.text('Adicionales / Observaciones:', marginX, y);
         y += 14;
-
-        // Texto de la observación
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(10);
         pdf.setTextColor('#333');
-        
-        // Ajuste de texto largo para la observación
         const anchoTextoObs = pageWidth - (marginX * 2);
         const lineasObs = pdf.splitTextToSize(observacionTexto, anchoTextoObs);
-        
         pdf.text(lineasObs, marginX, y);
       }
       
@@ -335,9 +307,155 @@ export default function Reports() {
     setImprimiendo(false);
   };
 
+  // ==================================================================
+  // REPORTE SEMANAL DETALLADO (HORIZONTAL MEJORADO)
+  // ==================================================================
+  const imprimirReporteSemanal = async () => {
+    if (!fechaParaImprimir) {
+        alert("Selecciona un día en el calendario para identificar la semana a imprimir.");
+        return;
+    }
+    setImprimiendo(true);
+
+    try {
+        const fechaInicioSemana = startOfWeek(fechaParaImprimir, { weekStartsOn: 1 });
+        const diasSemanaArr = [];
+        for (let i = 0; i < 7; i++) {
+            diasSemanaArr.push(addDays(fechaInicioSemana, i));
+        }
+
+        const promesas = diasSemanaArr.map(fecha => 
+            getMenusConInsumosByDay(format(fecha, "yyyy-MM-dd"), { sucursalId })
+                .then(data => ({ date: fecha, menus: data || [] }))
+                .catch(() => ({ date: fecha, menus: [] }))
+        );
+        const resultadosSemana = await Promise.all(promesas);
+
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        
+        const marginX = 20;
+        const colWidth = (pageWidth - (marginX * 2)) / 7;
+        let y = 40;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor("#0a3761");
+        const nombreComedor = selected?.nombre?.toUpperCase() || "COMEDOR";
+        doc.text(`PROGRAMACIÓN SEMANAL DE MENÚS - ${nombreComedor}`, pageWidth / 2, y, { align: "center" });
+        y += 20;
+        
+        doc.setFontSize(11);
+        doc.setTextColor("#555");
+        const rangoFechas = `Semana del ${format(diasSemanaArr[0], "dd/MM")} al ${format(diasSemanaArr[6], "dd/MM/yyyy")}`;
+        doc.text(rangoFechas, pageWidth / 2, y, { align: "center" });
+        y += 25;
+
+        const startY = y;
+        let maxY = y;
+
+        // --- ENCABEZADOS DE COLUMNA ---
+        resultadosSemana.forEach((dayData, i) => {
+            const x = marginX + (i * colWidth);
+            const fechaLegible = format(dayData.date, "EEEE dd", { locale: es }).toUpperCase();
+            
+            doc.setFillColor(230, 240, 255);
+            doc.rect(x, startY, colWidth, 20, 'F');
+            doc.rect(x, startY, colWidth, 20); // Borde encabezado
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor("#000");
+            doc.text(fechaLegible, x + (colWidth / 2), startY + 14, { align: "center" });
+        });
+
+        const contentStartY = startY + 20;
+
+        // --- CONTENIDO DE COLUMNAS ---
+        resultadosSemana.forEach((dayData, i) => {
+            const x = marginX + (i * colWidth);
+            let currentY = contentStartY + 10;
+            const menus = dayData.menus;
+
+            if (menus.length === 0) {
+                doc.setFont("helvetica", "italic");
+                doc.setFontSize(8);
+                doc.setTextColor("#888");
+                doc.text("Sin programación", x + 5, currentY);
+            } else {
+                const porTipo = { 'Desayuno': [], 'Almuerzo': [], 'Cena': [] };
+                menus.forEach(asig => {
+                    if (!porTipo[asig.tipoComida]) porTipo[asig.tipoComida] = [];
+                    porTipo[asig.tipoComida].push(asig);
+                });
+
+                ['Desayuno', 'Almuerzo', 'Cena'].forEach(tipo => {
+                    const asignaciones = porTipo[tipo];
+                    if (asignaciones.length > 0) {
+                        // Título del tipo de comida (ej. ALMUERZO) - Solo UNA VEZ
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(8);
+                        doc.setTextColor("#0a3761");
+                        doc.text(tipo.toUpperCase(), x + 5, currentY);
+                        
+                        // Línea divisoria debajo del título de comida
+                        doc.setDrawColor(200, 200, 200); 
+                        doc.setLineWidth(0.5);
+                        doc.line(x + 2, currentY + 3, x + colWidth - 2, currentY + 3);
+                        
+                        currentY += 12;
+
+                        asignaciones.forEach(asig => {
+                            if (asig.menu && asig.menu.recetas) {
+                                const recetasOrdenadas = [...asig.menu.recetas].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+
+                                recetasOrdenadas.forEach((receta, index) => {
+                                    doc.setFont("helvetica", "normal");
+                                    doc.setFontSize(8);
+                                    doc.setTextColor("#000");
+                                    
+                                    // CORRECCIÓN: Nombre de receta limpio y sin repetir categoría
+                                    // Ej: "• Crema de Zapallo"
+                                    const textoPlato = `• ${receta.nombre || receta.nombreReceta}`;
+                                    
+                                    const lines = doc.splitTextToSize(textoPlato, colWidth - 10);
+                                    doc.text(lines, x + 5, currentY);
+                                    
+                                    // Más espacio entre recetas (12pt por línea)
+                                    currentY += (lines.length * 10) + 6; 
+                                });
+                            }
+                        });
+                        currentY += 8; // Espacio entre tipos de comida
+                    }
+                });
+            }
+            if (currentY > maxY) maxY = currentY;
+        });
+
+        const finalHeight = Math.max(maxY, pageHeight - 30);
+        resultadosSemana.forEach((_, i) => {
+            const x = marginX + (i * colWidth);
+            doc.setDrawColor(0);
+            doc.setLineWidth(1);
+            doc.rect(x, contentStartY, colWidth, finalHeight - contentStartY);
+        });
+
+        doc.save(`Reporte_Semanal_${format(diasSemanaArr[0], "yyyy-MM-dd")}.pdf`);
+
+    } catch (error) {
+        console.error("Error al generar reporte semanal:", error);
+        alert("Hubo un error al generar el reporte semanal.");
+    } finally {
+        setImprimiendo(false);
+    }
+  };
+
+
   return (
     <div>
-      {/* ... (Renderizado del calendario, todo se mantiene igual) ... */}
+      {/* Barra superior */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Calendar className="text-blue-600" size={28} />
@@ -349,6 +467,18 @@ export default function Reports() {
           </div>
         </div>
         <div className="flex gap-2">
+           {/* BOTÓN NUEVO: REPORTE SEMANAL */}
+           <button
+            onClick={imprimirReporteSemanal}
+            disabled={!fechaParaImprimir || imprimiendo}
+            className={`flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors ${
+              !fechaParaImprimir ? "bg-gray-300 text-gray-500 cursor-not-allowed" : ""
+            }`}
+            title="Selecciona un día en el calendario para imprimir la semana correspondiente"
+          >
+             {imprimiendo ? "Generando..." : <><List size={18} /> Reporte Semanal</>}
+          </button>
+
           <button
             onClick={exportarPDF}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition-colors"
@@ -368,6 +498,7 @@ export default function Reports() {
           </button>
         </div>
       </div>
+      {/* ... (Resto del componente sin cambios) ... */}
       <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-3">
         <button onClick={mesAnterior} className="p-2 rounded-lg hover:bg-gray-200 transition-colors">
           <ChevronLeft size={22} />

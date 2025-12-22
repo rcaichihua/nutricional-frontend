@@ -1,10 +1,10 @@
-//export const API_URL_BASE = "http://localhost:8088/api";
-export const API_URL_BASE = "http://192.168.1.6:8088/api";
+export const API_URL_BASE = "http://localhost:8088/api";
+//export const API_URL_BASE = "http://192.168.1.6:8088/api";
 
 
 export const APP_CONFIG = {
   // Configuración de la aplicación
-  APP_NAME: 'Nutricional Frontend',
+  APP_NAME: 'Nutricional Frontend', 
   APP_VERSION: '1.0.0',
 
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api', 
