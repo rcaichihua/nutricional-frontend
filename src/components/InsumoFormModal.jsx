@@ -1,19 +1,30 @@
-import { useState, useEffect } from "react";
-import { Save, X } from "lucide-react";
-import { SUBGRUPOS } from "../config/constants";
+import { useState, useEffect } from 'react';
+import { Save, X } from 'lucide-react';
+import { SUBGRUPOS } from '../config/constants';
 
 export default function InsumoFormModal({ insumo, onSave, onClose }) {
-  const [form, setForm] = useState(insumo || { estado: "ACTIVO" });
+  // Inicializamos con valores por defecto seguros para evitar errores de validación
+  const [form, setForm] = useState(
+    insumo || {
+      estado: 'ACTIVO',
+      grupo: 'ALIMENTOS', // Asegura que grupo tenga valor por defecto al crear
+    }
+  );
 
   useEffect(() => {
-    setForm(insumo || { estado: "ACTIVO" });
+    // Al recibir props, si es nuevo (sin ID), aseguramos los defaults
+    setForm({
+      ...insumo,
+      estado: insumo?.estado || 'ACTIVO',
+      grupo: insumo?.grupo || 'ALIMENTOS', // Valor por defecto visible y válido
+    });
   }, [insumo]);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
-      [name]: type === "number" ? Number(value) : value
+      [name]: type === 'number' ? Number(value) : value,
     }));
   };
 
@@ -21,6 +32,9 @@ export default function InsumoFormModal({ insumo, onSave, onClose }) {
     e.preventDefault();
     onSave(form);
   };
+
+  // Determinamos si es edición basándonos en si tiene ID, no solo si existe el objeto
+  const isEditing = !!insumo?.insumoId;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
@@ -32,33 +46,37 @@ export default function InsumoFormModal({ insumo, onSave, onClose }) {
           <X size={28} />
         </button>
         <h3 className="text-2xl font-bold text-gray-800 mb-6">
-          {insumo ? "Editar insumo" : "Nuevo insumo"}
+          {isEditing ? 'Editar insumo' : 'Nuevo insumo'}
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
             {/* Campo: Grupo */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Grupo</label>
+              <label className="font-semibold text-gray-600">
+                Grupo
+              </label>
               <input
                 type="text"
                 name="grupo"
-                value={form.grupo ?? "ALIMENTOS"}
-                disabled
-                required
-                className="border rounded-lg px-3 py-2 bg-gray-100 text-gray-500"
-                onChange={handleChange}
+                value={form.grupo} // Usamos el valor del estado que ya tiene el default
+                disabled // Deshabilitado para que el usuario no lo cambie, pero se envía
+                readOnly
+                className="border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed"
               />
             </div>
             {/* Campo: Subgrupo */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Subgrupo</label>
+              <label className="font-semibold text-gray-600">
+                Subgrupo
+              </label>
               <select
                 name="subgrupo"
-                value={form.subgrupo ?? ""}
+                value={form.subgrupo ?? ''}
                 required
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               >
+                <option value="">Seleccione...</option>
                 {Object.entries(SUBGRUPOS).map(([key, value]) => (
                   <option key={key} value={value}>
                     {value}
@@ -68,11 +86,13 @@ export default function InsumoFormModal({ insumo, onSave, onClose }) {
             </div>
             {/* Campo: Nombre del insumo */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Nombre</label>
+              <label className="font-semibold text-gray-600">
+                Nombre
+              </label>
               <input
                 type="text"
                 name="nombre"
-                value={form.nombre ?? ""}
+                value={form.nombre ?? ''}
                 required
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
@@ -80,287 +100,335 @@ export default function InsumoFormModal({ insumo, onSave, onClose }) {
             </div>
             {/* Campo: Peso Neto */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Peso Neto (g)</label>
+              <label className="font-semibold text-gray-600">
+                Peso Neto (g)
+              </label>
               <input
                 type="number"
                 name="pesoNeto"
                 step="0.01"
-                value={form.pesoNeto ?? ""}
+                value={form.pesoNeto ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Energía Kcal */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Energía (kcal)</label>
+              <label className="font-semibold text-gray-600">
+                Energía (kcal)
+              </label>
               <input
                 type="number"
                 name="energiaKcal"
                 step="0.01"
-                value={form.energiaKcal ?? ""}
+                value={form.energiaKcal ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Agua (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Agua (g)</label>
+              <label className="font-semibold text-gray-600">
+                Agua (g)
+              </label>
               <input
                 type="number"
                 name="aguaG"
                 step="0.01"
-                value={form.aguaG ?? ""}
+                value={form.aguaG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Proteína Animal (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Proteína Animal (g)</label>
+              <label className="font-semibold text-gray-600">
+                Proteína Animal (g)
+              </label>
               <input
                 type="number"
                 name="proteinaAnimalG"
                 step="0.01"
-                value={form.proteinaAnimalG ?? ""}
+                value={form.proteinaAnimalG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Proteína Vegetal (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Proteína Vegetal (g)</label>
+              <label className="font-semibold text-gray-600">
+                Proteína Vegetal (g)
+              </label>
               <input
                 type="number"
                 name="proteinaVegetalG"
                 step="0.01"
-                value={form.proteinaVegetalG ?? ""}
+                value={form.proteinaVegetalG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Nitrógeno Animal (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Nitrógeno Animal (g)</label>
+              <label className="font-semibold text-gray-600">
+                Nitrógeno Animal (g)
+              </label>
               <input
                 type="number"
                 name="nitrogenoAnimalG"
                 step="0.01"
-                value={form.nitrogenoAnimalG ?? ""}
+                value={form.nitrogenoAnimalG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Nitrógeno Vegetal (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Nitrógeno Vegetal (g)</label>
+              <label className="font-semibold text-gray-600">
+                Nitrógeno Vegetal (g)
+              </label>
               <input
                 type="number"
                 name="nitrogenoVegetalG"
                 step="0.01"
-                value={form.nitrogenoVegetalG ?? ""}
+                value={form.nitrogenoVegetalG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Grasa Animal (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Grasa Animal (g)</label>
+              <label className="font-semibold text-gray-600">
+                Grasa Animal (g)
+              </label>
               <input
                 type="number"
                 name="grasaAnimalG"
                 step="0.01"
-                value={form.grasaAnimalG ?? ""}
+                value={form.grasaAnimalG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Grasa Vegetal (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Grasa Vegetal (g)</label>
+              <label className="font-semibold text-gray-600">
+                Grasa Vegetal (g)
+              </label>
               <input
                 type="number"
                 name="grasaVegetalG"
                 step="0.01"
-                value={form.grasaVegetalG ?? ""}
+                value={form.grasaVegetalG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Carbohidrato (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Carbohidrato (g)</label>
+              <label className="font-semibold text-gray-600">
+                Carbohidrato (g)
+              </label>
               <input
                 type="number"
                 name="choCarbohidratoG"
                 step="0.01"
-                value={form.choCarbohidratoG ?? ""}
+                value={form.choCarbohidratoG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Fibra Dietaria (g) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Fibra Dietaria (g)</label>
+              <label className="font-semibold text-gray-600">
+                Fibra Dietaria (g)
+              </label>
               <input
                 type="number"
                 name="fibraG"
                 step="0.01"
-                value={form.fibraG ?? ""}
+                value={form.fibraG ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Calcio Animal (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Calcio Animal (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Calcio Animal (mg)
+              </label>
               <input
                 type="number"
                 name="calcioAnimalMg"
                 step="0.01"
-                value={form.calcioAnimalMg ?? ""}
+                value={form.calcioAnimalMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Calcio Vegetal (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Calcio Vegetal (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Calcio Vegetal (mg)
+              </label>
               <input
                 type="number"
                 name="calcioVegetalMg"
                 step="0.01"
-                value={form.calcioVegetalMg ?? ""}
+                value={form.calcioVegetalMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Fósforo (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Fósforo (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Fósforo (mg)
+              </label>
               <input
                 type="number"
                 name="fosforoMg"
                 step="0.01"
-                value={form.fosforoMg ?? ""}
+                value={form.fosforoMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Hierro Hemo (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Hierro Hemo (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Hierro Hemo (mg)
+              </label>
               <input
                 type="number"
                 name="hierroHemMg"
                 step="0.01"
-                value={form.hierroHemMg ?? ""}
+                value={form.hierroHemMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Hierro No Hemo (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Hierro No Hemo (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Hierro No Hemo (mg)
+              </label>
               <input
                 type="number"
                 name="hierroNoHemMg"
                 step="0.01"
-                value={form.hierroNoHemMg ?? ""}
+                value={form.hierroNoHemMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Retinol (mcg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Retinol (mcg)</label>
+              <label className="font-semibold text-gray-600">
+                Retinol (mcg)
+              </label>
               <input
                 type="number"
                 name="retinolMcg"
                 step="0.01"
-                value={form.retinolMcg ?? ""}
+                value={form.retinolMcg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Vitamina B1 Tiamina (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Vit. B1 Tiamina (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Vit. B1 Tiamina (mg)
+              </label>
               <input
                 type="number"
                 name="vitaminaB1TiaminaMg"
                 step="0.01"
-                value={form.vitaminaB1TiaminaMg ?? ""}
+                value={form.vitaminaB1TiaminaMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Vitamina B2 Riboflavina (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Vit. B2 Riboflavina (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Vit. B2 Riboflavina (mg)
+              </label>
               <input
                 type="number"
                 name="vitaminaB2RiboflavinaMg"
                 step="0.01"
-                value={form.vitaminaB2RiboflavinaMg ?? ""}
+                value={form.vitaminaB2RiboflavinaMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Niacina (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Niacina (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Niacina (mg)
+              </label>
               <input
                 type="number"
                 name="niacinaMg"
                 step="0.01"
-                value={form.niacinaMg ?? ""}
+                value={form.niacinaMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Vitamina C (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Vitamina C (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Vitamina C (mg)
+              </label>
               <input
                 type="number"
                 name="vitaminaCMg"
                 step="0.01"
-                value={form.vitaminaCMg ?? ""}
+                value={form.vitaminaCMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Sodio (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Sodio (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Sodio (mg)
+              </label>
               <input
                 type="number"
                 name="sodioMg"
                 step="0.01"
-                value={form.sodioMg ?? ""}
+                value={form.sodioMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
             </div>
             {/* Campo: Potasio (mg) */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Potasio (mg)</label>
+              <label className="font-semibold text-gray-600">
+                Potasio (mg)
+              </label>
               <input
                 type="number"
                 name="potasioMg"
                 step="0.01"
-                value={form.potasioMg ?? ""}
+                value={form.potasioMg ?? ''}
                 className="border rounded-lg px-3 py-2"
                 onChange={handleChange}
               />
-            </div>            
+            </div>
             {/* Campo: Estado */}
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-gray-600">Estado</label>
+              <label className="font-semibold text-gray-600">
+                Estado
+              </label>
               <select
                 name="estado"
                 className="border rounded-lg px-3 py-2"
-                value={form.estado ?? "ACTIVO"}
+                value={form.estado ?? 'ACTIVO'}
                 onChange={handleChange}
               >
                 <option value="ACTIVO">ACTIVO</option>
